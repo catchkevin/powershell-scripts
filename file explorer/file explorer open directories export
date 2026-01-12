@@ -1,0 +1,48 @@
+<#
+.SYNOPSIS
+    Retrieves and displays the file paths of all currently open Windows Explorer windows.
+#>
+
+Clear-Host
+
+# Prompt 1: Select Script Type
+$choice = Read-Host "Select [D]etailed Script or [S]ingle Line Script (Both do the same)"
+
+switch ($choice) {
+    "D" {
+        Write-Host "`n--- Running Detailed Script ---" -ForegroundColor Cyan
+        
+        # Create the Shell object to access open windows
+        $ShellApp = New-Object -ComObject Shell.Application
+
+        # Filter for Windows/File Explorer windows
+        $ExplorerWindows = $ShellApp.Windows() | Where-Object { 
+            $_.Name -eq "Windows Explorer" -or $_.Name -eq "File Explorer" 
+        }
+
+        # Extract and format the paths
+        $Paths = $ExplorerWindows | ForEach-Object {
+            $_.Document.Folder.Self.Path
+        }
+
+        # Output to screen
+        if ($Paths) {
+            $Paths | ForEach-Object { Write-Host "Path: $_" }
+        } else {
+            Write-Host "No Explorer windows found." -ForegroundColor Yellow
+        }
+    }
+    
+    "S" {
+        Write-Host "`n--- Running Single Line Script ---" -ForegroundColor Green
+        
+        # The One-Liner Execution
+        (New-Object -ComObject Shell.Application).Windows() | Where-Object {$_.Name -match "Explorer"} | ForEach-Object {$_.Document.Folder.Self.Path}
+    }
+
+    Default {
+        Write-Host "Invalid selection. Please run the script again and choose [D] or [S]." -ForegroundColor Red
+    }
+}
+
+Write-Host "`nTask Complete." -ForegroundColor Gray
