@@ -1,5 +1,5 @@
 # ============================================================
-# Hybrid AzCopy File Copy with 1-Second Metrics + Logging
+# Hybrid AzCopy Copy Tool with Local/Blob + 1s Metrics
 # ============================================================
 
 # -------------------------
@@ -7,7 +7,6 @@
 # -------------------------
 function Read-YesNo {
     param([Parameter(Mandatory)][string]$Prompt)
-
     while ($true) {
         $raw = (Read-Host "$Prompt [`"Y`"es | `"N`"o]").Trim().ToLower()
         switch ($raw) {
@@ -21,12 +20,26 @@ function Read-YesNo {
 }
 
 # -------------------------
-# Validate AzCopy
+# AzCopy Path
 # -------------------------
-if (-not (Get-Command azcopy -ErrorAction SilentlyContinue)) {
-    Write-Error 'AzCopy is not installed or not in PATH.'
-    exit
-}
+do {
+    $AzCopyExe = (Read-Host 'Enter full path to azcopy.exe').Trim('"')
+    if (-not (Test-Path $AzCopyExe)) {
+        Write-Host 'Invalid azcopy.exe path.' -ForegroundColor Red
+    }
+} until (Test-Path $AzCopyExe)
+
+# -------------------------
+# Copy Direction
+# -------------------------
+do {
+    Write-Host ''
+    Write-Host 'Copy Direction:'
+    Write-Host '[L] Local → Local'
+    Write-Host '[B] Local → Blob'
+    Write-Host '[D] Blob → Local'
+    $direction = (Read-Host 'Enter choice').ToUpper()
+} until ($direction -in @('L','B','D'))
 
 # -------------------------
 # Copy Mode
@@ -34,112 +47,149 @@ if (-not (Get-Command azcopy -ErrorAction SilentlyContinue)) {
 do {
     Write-Host ''
     Write-Host 'Copy ["S"pecific File] or ["A"ll Files] in a Directory'
-    Write-Host 'Note: (Answer must be S or A)'
-    $mode = (Read-Host 'Enter choice').Trim().ToUpper()
+    $mode = (Read-Host 'Enter choice').ToUpper()
 } until ($mode -in @('S','A'))
 
 # -------------------------
-# Source selection
+# Blob Auth (if needed)
 # -------------------------
-$sourceFiles = @()
+$BlobBaseUrl = $null
+$BlobSas     = $null
+$BlobFullUrl = $null
 
-if ($mode -eq 'S') {
-    $sourceDir = Read-Host 'Enter Source Directory'
-    $fileName  = Read-Host 'Enter Filename'
+if ($direction -in @('B','D')) {
+    do {
+        Write-Host ''
+        Write-Host 'Blob Auth Type:'
+        Write-Host '[F] Full SAS URL (URL includes token)'
+        Write-Host '[S] URL and SAS Token Separate'
+        $authMode = (Read-Host 'Enter choice').ToUpper()
+    } until ($authMode -in @('F','S'))
 
-    $fullPath = Join-Path $sourceDir $fileName
-    if (-not (Test-Path $fullPath)) {
-        Write-Error 'Source file does not exist.'
-        exit
+    if ($authMode -eq 'F') {
+        $BlobFullUrl = Read-Host 'Enter FULL Blob SAS URL'
     }
+    else {
+        $BlobBaseUrl = Read-Host 'Enter Blob URL (no token)'
+        $BlobSas = Read-Host 'Enter SAS Token (starting with ?)'
+    }
+}
 
-    $sourceFiles = Get-Item $fullPath
+# -------------------------
+# Source Selection
+# -------------------------
+$sourceItems = @()
+
+if ($direction -ne 'D') {
+    if ($mode -eq 'S') {
+        $srcDir  = Read-Host 'Enter Source Directory'
+        $file    = Read-Host 'Enter Filename'
+        $path    = Join-Path $srcDir $file
+        if (-not (Test-Path $path)) { Write-Error 'Source file not found'; exit }
+        $sourceItems = Get-Item $path
+    }
+    else {
+        $srcDir = Read-Host 'Enter Source Directory'
+        if (-not (Test-Path $srcDir)) { Write-Error 'Directory not found'; exit }
+        $sourceItems = Get-ChildItem $srcDir -File
+    }
 }
 else {
-    $sourceDir = Read-Host 'Enter Source Directory'
-    if (-not (Test-Path $sourceDir)) {
-        Write-Error 'Source directory does not exist.'
-        exit
+    # Blob source
+    if ($mode -eq 'S') {
+        $blobPath = Read-Host 'Enter Blob Path (container/file)'
+        $sourceItems = @($blobPath)
     }
+    else {
+        $blobPath = Read-Host 'Enter Blob Directory (container/path)'
+        $sourceItems = @($blobPath)
+    }
+}
 
-    $sourceFiles = Get-ChildItem $sourceDir -File
-    if (-not $sourceFiles) {
-        Write-Error 'No files found.'
+# -------------------------
+# Destination (local)
+# -------------------------
+if ($direction -ne 'B') {
+    $destFolder = Read-Host 'Enter Destination Folder'
+    if (-not (Test-Path $destFolder)) {
+        New-Item -ItemType Directory -Path $destFolder -Force | Out-Null
+    }
+}
+
+# -------------------------
+# Prompt for Logging Folder
+# -------------------------
+$defaultLogDir = "$env:USERPROFILE\Documents\filecopytest_logs"
+$logDirInput = Read-Host "Enter log folder path (Press Enter to use default: $defaultLogDir)"
+if ([string]::IsNullOrWhiteSpace($logDirInput)) {
+    $metricsDir = $defaultLogDir
+} else {
+    $metricsDir = $logDirInput
+}
+if (-not (Test-Path $metricsDir)) {
+    try {
+        New-Item -ItemType Directory -Path $metricsDir -Force | Out-Null
+    } catch {
+        Write-Error "Cannot create log folder at $metricsDir. Please check permissions."
         exit
     }
 }
 
 # -------------------------
-# Destination
+# Ensure .azcopy log folder exists
 # -------------------------
-$destFolder = Read-Host 'Enter Destination Folder'
-if (-not (Test-Path $destFolder)) {
-    New-Item -Path $destFolder -ItemType Directory -Force | Out-Null
-}
-
-# -------------------------
-# Log directory
-# -------------------------
-$metricsLogDir = "$env:USERPROFILE\Documents\filecopytest_logs"
-if (-not (Test-Path $metricsLogDir)) {
-    New-Item -Path $metricsLogDir -ItemType Directory | Out-Null
+$azLogDir = "$env:USERPROFILE\.azcopy"
+if (-not (Test-Path $azLogDir)) {
+    New-Item -ItemType Directory -Path $azLogDir | Out-Null
 }
 
 # ============================================================
 # COPY LOOP
 # ============================================================
-foreach ($file in $sourceFiles) {
+foreach ($item in $sourceItems) {
 
-    $startTime = Get-Date
-    $timestamp = $startTime.ToString('yyyyMMdd_HHmmss')
+    $start = Get-Date
+    $stamp = (Get-Date).ToString("HHmmss_yyyyMMdd")
+    $metricsLog = Join-Path $metricsDir "${stamp}_azurecopy.csv"
 
-    $metricsLog = "$metricsLogDir\copy_file_test_$($file.BaseName)_$timestamp.csv"
-    $azLogDir   = "$env:USERPROFILE\.azcopy"
+    'Time,BytesTransferred,Percent,MBps,GBps,ETA' | Out-File $metricsLog -Encoding UTF8
 
-    'Time,BytesTransferred,Percent,MBps,GBps,ETA' |
-        Out-File $metricsLog -Encoding UTF8
-
-    $totalBytes = $file.Length
-    $destPath   = Join-Path $destFolder $file.Name
-
-    if (Test-Path $destPath) {
-        if (-not (Read-YesNo "Destination file '$($file.Name)' exists. Overwrite")) {
-            continue
-        }
+    # Build source/destination paths
+    if ($direction -eq 'L') {
+        $src = "`"$($item.FullName)`""
+        $dst = "`"$destFolder`""
+        $totalBytes = $item.Length
+    }
+    elseif ($direction -eq 'B') {
+        $src = "`"$($item.FullName)`""
+        $dst = if ($authMode -eq 'F') { "`"$BlobFullUrl`"" }
+               else { "`"$BlobBaseUrl/$($item.Name)$BlobSas`"" }
+        $totalBytes = $item.Length
+    }
+    else {
+        $src = if ($authMode -eq 'F') { "`"$BlobFullUrl`"" }
+               else { "`"$BlobBaseUrl/$item$BlobSas`"" }
+        $dst = "`"$destFolder`""
+        $totalBytes = 1
     }
 
     Write-Host ''
-    Write-Host "Starting copy: $($file.Name)" -ForegroundColor Cyan
-    Write-Host "Size: $([math]::Round($totalBytes / 1GB,2)) GB"
-    Write-Host '-------------------------------------------------------------'
+    Write-Host "Starting transfer..." -ForegroundColor Cyan
 
-    # Capture baseline AzCopy log count
-    $existingLogs = Get-ChildItem $azLogDir -Filter '*.log' | Sort-Object LastWriteTime
-
-    # Start AzCopy
+    # -------------------------
+    # Start AzCopy via call operator (&)
+    # -------------------------
     $azArgs = @(
         'copy'
-        "`"$($file.FullName)`""
-        "`"$destFolder`""
+        $src
+        $dst
         '--overwrite=true'
-        '--from-to=LocalLocal'
         '--log-level=INFO'
         '--output-type=text'
     )
 
-    $proc = Start-Process azcopy `
-        -ArgumentList ($azArgs -join ' ') `
-        -NoNewWindow `
-        -PassThru
-
-    # Wait for AzCopy log file to appear
-    do {
-        Start-Sleep -Milliseconds 500
-        $newLogs = Get-ChildItem $azLogDir -Filter '*.log' |
-                   Where-Object { $_.LastWriteTime -gt $startTime }
-    } until ($newLogs)
-
-    $azLog = $newLogs | Sort-Object LastWriteTime | Select-Object -Last 1
+    # Start AzCopy in background job so we can monitor metrics
+    $job = Start-Job -ScriptBlock { param($exe, $args) & $exe @args } -ArgumentList $AzCopyExe, $azArgs
 
     $lastBytes = 0
     $lastTime  = Get-Date
@@ -147,74 +197,48 @@ foreach ($file in $sourceFiles) {
     # -------------------------
     # 1-Second Metrics Loop
     # -------------------------
-    while (-not $proc.HasExited) {
-
+    do {
         Start-Sleep 1
         $now = Get-Date
 
-        # Extract latest byte count from AzCopy log
-        $lines = Get-Content $azLog.FullName -Tail 200 -ErrorAction SilentlyContinue
-        $byteLine = $lines | Select-String 'BytesTransferred'
+        # Parse last 200 lines of latest AzCopy log
+        $log = Get-ChildItem $azLogDir -Filter '*.log' |
+               Sort-Object LastWriteTime -Descending |
+               Select-Object -First 1
 
-        if ($byteLine) {
-            if ($byteLine.Line -match 'BytesTransferred:\s+(\d+)') {
-                $bytesCopied = [int64]$matches[1]
+        if ($log) {
+            $line = Get-Content $log.FullName -Tail 200 | Select-String 'BytesTransferred'
+            if ($line -and $line.Line -match 'BytesTransferred:\s+(\d+)') {
+                $bytes = [int64]$matches[1]
+                $delta = $bytes - $lastBytes
+                $sec   = ($now - $lastTime).TotalSeconds
+                if ($sec -le 0) { continue }
 
-                $deltaBytes = $bytesCopied - $lastBytes
-                $elapsed = ($now - $lastTime).TotalSeconds
-                if ($elapsed -le 0) { continue }
+                $mbps = [math]::Round(($delta / 1MB) / $sec, 2)
+                $gbps = [math]::Round(($delta / 1GB) / $sec, 4)
+                $pct  = if ($totalBytes -gt 1) { [math]::Round(($bytes / $totalBytes) * 100,2) } else { 0 }
 
-                $mbps = [math]::Round(($deltaBytes / 1MB) / $elapsed, 2)
-                $gbps = [math]::Round(($deltaBytes / 1GB) / $elapsed, 4)
-                $percent = [math]::Round(($bytesCopied / $totalBytes) * 100, 2)
-
-                $avgRate = $bytesCopied / ($now - $startTime).TotalSeconds
-                $etaSec = ($totalBytes - $bytesCopied) / $avgRate
-                $eta = (New-TimeSpan -Seconds $etaSec).ToString('hh\:mm\:ss')
+                $avg = $bytes / ($now - $start).TotalSeconds
+                $eta = if ($totalBytes -gt 1) { (New-TimeSpan -Seconds (($totalBytes - $bytes)/$avg)).ToString('hh\:mm\:ss') } else { 'N/A' }
 
                 $ts = $now.ToString('yyyy-MM-dd HH:mm:ss')
+                Write-Host "$ts | $pct% | $mbps MB/s | ETA $eta"
 
-                $output = "{0} | {1,6}% | {2,8:N0}/{3,8:N0} MB | {4,6} MB/s | ETA {5}" -f `
-                    $ts, $percent,
-                    ($bytesCopied / 1MB),
-                    ($totalBytes / 1MB),
-                    $mbps,
-                    $eta
+                "$ts,$bytes,$pct,$mbps,$gbps,$eta" | Out-File $metricsLog -Append -Encoding UTF8
 
-                Write-Host $output
-
-                "$ts,$bytesCopied,$percent,$mbps,$gbps,$eta" |
-                    Out-File $metricsLog -Append -Encoding UTF8
-
-                $lastBytes = $bytesCopied
+                $lastBytes = $bytes
                 $lastTime  = $now
             }
         }
-    }
 
-    # -------------------------
-    # Summary
-    # -------------------------
-    $endTime = Get-Date
-    $totalTime = $endTime - $startTime
-    $avgMBps = [math]::Round(($totalBytes / 1MB) / $totalTime.TotalSeconds, 2)
+    } while (Get-Job -Id $job.Id | Where-Object { $_.State -ne 'Completed' })
 
-    $summary = @"
-================ COPY SUMMARY ================
-File           : $($file.Name)
-Size           : $([math]::Round($totalBytes / 1GB,2)) GB
-Start Time     : $startTime
-End Time       : $endTime
-Total Time     : $totalTime
-Average Speed  : $avgMBps MB/s
-Metrics Log    : $metricsLog
-=============================================
-"@
+    # Cleanup background job
+    Receive-Job -Id $job.Id | Out-Null
+    Remove-Job -Id $job.Id
 
-    Write-Host ''
-    Write-Host $summary -ForegroundColor Green
-    $summary | Out-File $metricsLog -Append -Encoding UTF8
+    Write-Host 'Transfer completed.' -ForegroundColor Green
 }
 
 Write-Host ''
-Write-Host 'All transfers completed.' -ForegroundColor Cyan
+Write-Host 'All operations complete.' -ForegroundColor Cyan
