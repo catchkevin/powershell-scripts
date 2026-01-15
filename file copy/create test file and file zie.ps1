@@ -79,7 +79,7 @@ function Show-ScriptSummary {
     param([string]$Title = "PROCESSING SUMMARY")
 
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Host "`n--- $Title ---" -ForegroundColor Blue
+    Write-Host "`n--- $Title ---" -ForegroundColor White
     Write-Host "Completed at: $timestamp" -ForegroundColor Gray
     Write-Host "Total Expected:   $($DefaultList.Count)" -ForegroundColor White
     Write-Host "Total Created:    $($SuccessList.Count)" -ForegroundColor Green
@@ -106,7 +106,7 @@ function Show-ScriptSummary {
         Write-Host "Total Missed:    0" -ForegroundColor Gray
     }
 
-    $StatusColor = if ($missedItems.Count -gt 0 -or $FailedList.Count -gt 0) { "Red" } else { "Blue" }
+    $StatusColor = if ($missedItems.Count -gt 0 -or $FailedList.Count -gt 0) { "Red" } else { "White" }
     Write-Host "--------------------------" -ForegroundColor $StatusColor
     Write-Host "Done.`n"
 }
@@ -232,9 +232,10 @@ foreach ($size in $fileSizes) {
     [int64]$sizeInKB = [int64]$size * ($multiplier / 1KB)
     
     for ($i = 1; $i -le $fileCount; $i++) {
-        # Format: file_0000001024_1.csv (size in KB, zero-padded to 10 digits)
+        # Format: file_0000001024_0001.csv (size in KB 10 digits, iteration 4 digits)
         $paddedKB = $sizeInKB.ToString("D10")
-        $fileName = "file_$paddedKB`_$i.csv"
+        $paddedNum = $i.ToString("D4")
+        $fileName = "file_$paddedKB`_$paddedNum.csv"
         
         Write-Host "  - $fileName ($size $metricLabel)" -ForegroundColor White
         
@@ -281,230 +282,281 @@ if ($confirmChoice.ToLower() -ne 'y') {
 }
 
 # ==============================================================================
-# PARALLEL FILE CREATION ENGINE
+# PARALLEL FILE CREATION ENGINE WITH COPY OPTIMIZATION
 # ==============================================================================
 
 Write-Host "`n****************************************************" -ForegroundColor White
-Write-Host " Initializing Parallel File Creation" -ForegroundColor Yellow
+Write-Host " Initializing File Creation with Copy Optimization" -ForegroundColor Yellow
 Write-Host "****************************************************" -ForegroundColor White
 
 $ThrottleLimit = [Math]::Min(4, [Math]::Max(1, $env:NUMBER_OF_PROCESSORS))
-$BatchSize = 10  # Process 10 files at a time to manage memory
 $TotalFiles = $fileSpecs.Count
+$UniqueFileSizes = $fileSizes.Count
 
+Write-Host "Strategy: Create $UniqueFileSizes master file(s), then copy for duplicates" -ForegroundColor Cyan
 Write-Host "Parallel Threads: $ThrottleLimit" -ForegroundColor Cyan
 Write-Host "Total Files:      $TotalFiles" -ForegroundColor Cyan
-Write-Host "Batch Size:       $BatchSize files at a time" -ForegroundColor Cyan
 
 $Encoding = [System.Text.Encoding]::UTF8
-$ProcessedCount = 0
-$BatchNumber = 1
-$TotalBatches = [Math]::Ceiling($TotalFiles / $BatchSize)
 
-# Process files in batches
-for ($batchStart = 0; $batchStart -lt $TotalFiles; $batchStart += $BatchSize) {
-    $batchEnd = [Math]::Min($batchStart + $BatchSize - 1, $TotalFiles - 1)
-    $currentBatch = $fileSpecs[$batchStart..$batchEnd]
+# ==============================================================================
+# PHASE 1: CREATE MASTER FILES (One per unique size)
+# ==============================================================================
+
+Write-Host "`n--- PHASE 1: Creating Master Files ---" -ForegroundColor Green
+Write-Host "Creating one file per size...`n" -ForegroundColor Gray
+
+$masterFiles = @{}
+$phaseStartTime = Get-Date
+
+$RunspacePool = [runspacefactory]::CreateRunspacePool(1, $ThrottleLimit)
+$RunspacePool.Open()
+
+$Jobs = @()
+
+foreach ($size in $fileSizes) {
+    [int64]$sizeInKB = [int64]$size * ($multiplier / 1KB)
+    [int64]$targetBytes = [int64]$size * $multiplier
     
-    Write-Host "`n--- Processing Batch $BatchNumber of $TotalBatches ($($currentBatch.Count) files) ---" -ForegroundColor Magenta
+    $paddedKB = $sizeInKB.ToString("D10")
+    $masterFileName = "file_$paddedKB`_master.csv"
+    $masterFiles[$size] = "$folder\$masterFileName"
     
-    $RunspacePool = [runspacefactory]::CreateRunspacePool(1, $ThrottleLimit)
-    $RunspacePool.Open()
-    
-    $Jobs = @()
+    if ($targetBytes -lt 10MB) { $ChunkSize = 4MB }
+    elseif ($targetBytes -lt 1GB) { $ChunkSize = 8MB }
+    else { $ChunkSize = 16MB }
 
-    foreach ($spec in $currentBatch) {
-        # Dynamic buffer sizing based on file size
-        [int64]$targetBytes = $spec.TargetBytes
-        
-        if ($targetBytes -lt 10MB) { $ChunkSize = 4MB }
-        elseif ($targetBytes -lt 1GB) { $ChunkSize = 8MB }
-        else { $ChunkSize = 16MB }
+    $ps = [powershell]::Create()
+    $ps.RunspacePool = $RunspacePool
 
-        $ps = [powershell]::Create()
-        $ps.RunspacePool = $RunspacePool
+    $ps.AddScript({
+        param($fileName, $folder, $targetBytes, $ChunkSize, $Encoding)
 
-        $ps.AddScript({
-            param($fileName, $folder, $targetBytes, $SuccessList, $SkippedList, $FailedList, $ChunkSize, $Encoding)
+        $file = "$folder\$fileName"
+        $fs = $null
 
-            $file = "$folder\$fileName"
+        try {
+            if (Test-Path $file) {
+                return @{ Status = 'Exists'; File = $fileName }
+            }
+
+            $lines = @(
+                "Column1,Column2,Column3,Column4,Column5`r`n",
+                "Value1,Value2,Value3,Value4,Value5`r`n",
+                "Data1,Data2,Data3,Data4,Data5`r`n",
+                "Record1,Record2,Record3,Record4,Record5`r`n",
+                "Entry1,Entry2,Entry3,Entry4,Entry5`r`n"
+            )
+            
+            $buffer = New-Object byte[] $ChunkSize
+            $lineIndex = 0
+            for ($i = 0; $i -lt $ChunkSize; $i++) {
+                $currentLine = $lines[$lineIndex % $lines.Count]
+                $lineBytes = $Encoding.GetBytes($currentLine)
+                $buffer[$i] = $lineBytes[$i % $lineBytes.Length]
+                if (($i + 1) % $lineBytes.Length -eq 0) { $lineIndex++ }
+            }
+
+            $fs = [IO.File]::Open($file, 'Create', 'Write', 'None')
+            [int64]$written = 0
+
+            while ($written -lt $targetBytes) {
+                [int64]$remaining = $targetBytes - $written
+                [int]$toWrite = if ($remaining -gt $ChunkSize) { $ChunkSize } else { [int]$remaining }
+                
+                $fs.Write($buffer, 0, $toWrite)
+                $written += $toWrite
+            }
+
+            $fs.Close()
+            $fs.Dispose()
             $fs = $null
 
-            try {
-                # Check if file already exists
-                if (Test-Path $file) {
-                    $SkippedList.Add($file)
-                    return @{ Status = 'Skipped'; File = $fileName }
-                }
+            $actualSize = (Get-Item $file -ErrorAction Stop).Length
+            if ($actualSize -ne $targetBytes) {
+                throw "Size mismatch. Expected: $targetBytes, Actual: $actualSize"
+            }
 
-                # Create varied CSV content
-                $lines = @(
-                    "Column1,Column2,Column3,Column4,Column5`r`n",
-                    "Value1,Value2,Value3,Value4,Value5`r`n",
-                    "Data1,Data2,Data3,Data4,Data5`r`n",
-                    "Record1,Record2,Record3,Record4,Record5`r`n",
-                    "Entry1,Entry2,Entry3,Entry4,Entry5`r`n"
-                )
-                
-                # Build buffer with varied content
-                $buffer = New-Object byte[] $ChunkSize
-                $lineIndex = 0
-                for ($i = 0; $i -lt $ChunkSize; $i++) {
-                    $currentLine = $lines[$lineIndex % $lines.Count]
-                    $lineBytes = $Encoding.GetBytes($currentLine)
-                    $buffer[$i] = $lineBytes[$i % $lineBytes.Length]
-                    if (($i + 1) % $lineBytes.Length -eq 0) { $lineIndex++ }
-                }
+            if ($targetBytes -gt 5GB) {
+                $buffer = $null
+                [System.GC]::Collect()
+            }
 
-                # Open file for writing
-                $fs = [IO.File]::Open($file, 'Create', 'Write', 'None')
-                [int64]$written = 0
+            return @{ Status = 'Success'; File = $fileName }
 
-                # Write in chunks
-                while ($written -lt $targetBytes) {
-                    [int64]$remaining = $targetBytes - $written
-                    [int]$toWrite = if ($remaining -gt $ChunkSize) { $ChunkSize } else { [int]$remaining }
-                    
-                    $fs.Write($buffer, 0, $toWrite)
-                    $written += $toWrite
-                }
-
+        } catch {
+            return @{ Status = 'Failed'; File = $fileName; Error = $_.Exception.Message }
+        } finally {
+            if ($fs) {
                 $fs.Close()
                 $fs.Dispose()
-                $fs = $null
-
-                # Verify file size
-                $actualSize = (Get-Item $file -ErrorAction Stop).Length
-                if ($actualSize -ne $targetBytes) {
-                    throw "Size mismatch. Expected: $targetBytes, Actual: $actualSize"
-                }
-
-                $SuccessList.Add($file)
-
-                # Clean up for large files
-                if ($targetBytes -gt 5GB) {
-                    $buffer = $null
-                    [System.GC]::Collect()
-                }
-
-                return @{ Status = 'Success'; File = $fileName }
-
-            } catch {
-                $FailedList.Add("$file - Error: $_")
-                return @{ Status = 'Failed'; File = $fileName; Error = $_.Exception.Message }
-            } finally {
-                if ($fs) {
-                    $fs.Close()
-                    $fs.Dispose()
-                }
             }
-        }).AddArgument($spec.FileName).AddArgument($folder).AddArgument($targetBytes).AddArgument($SuccessList).AddArgument($SkippedList).AddArgument($FailedList).AddArgument($ChunkSize).AddArgument($Encoding)
-
-        $Jobs += @{
-            PowerShell = $ps
-            Handle     = $ps.BeginInvoke()
-            FileName   = $spec.FileName
-            Size       = $spec.Size
-            Metric     = $spec.Metric
-            TargetBytes = $targetBytes
         }
+    }).AddArgument($masterFileName).AddArgument($folder).AddArgument($targetBytes).AddArgument($ChunkSize).AddArgument($Encoding)
+
+    $Jobs += @{
+        PowerShell = $ps
+        Handle     = $ps.BeginInvoke()
+        FileName   = $masterFileName
+        Size       = $size
+        TargetBytes = $targetBytes
     }
+}
 
-    # ==============================================================================
-    # REAL-TIME PROGRESS MONITORING FOR CURRENT BATCH
-    # ==============================================================================
+# Monitor master file creation
+$lastReported = @{}
+$fileStarted = @{}
+foreach ($job in $Jobs) {
+    $lastReported[$job.FileName] = 0
+    $fileStarted[$job.FileName] = $false
+}
 
-    Write-Host "Creating batch files (checking every 1 second)...`n" -ForegroundColor Gray
-
-    $batchStartTime = Get-Date
-    $lastReported = @{}
-    $fileStarted = @{}
+while ($Jobs | Where-Object { -not $_.Handle.IsCompleted }) {
+    Start-Sleep -Seconds 1
+    
     foreach ($job in $Jobs) {
-        $lastReported[$job.FileName] = 0
-        $fileStarted[$job.FileName] = $false
-    }
-
-    # Monitor all jobs in current batch until complete
-    while ($Jobs | Where-Object { -not $_.Handle.IsCompleted }) {
-        Start-Sleep -Seconds 1
+        $file = "$folder\$($job.FileName)"
         
-        foreach ($job in $Jobs) {
-            $file = "$folder\$($job.FileName)"
-            
-            if (Test-Path $file) {
-                try {
-                    # Show starting message once
-                    if (-not $fileStarted[$job.FileName]) {
-                        $targetMB = [math]::Round($job.TargetBytes / 1MB, 2)
-                        Write-Host "  $($job.FileName) : Starting ($targetMB MB target)..." -ForegroundColor Cyan
-                        $fileStarted[$job.FileName] = $true
-                    }
-                    
-                    $currentSize = (Get-Item $file).Length
-                    $percent = [Math]::Floor(($currentSize / $job.TargetBytes) * 100)
-                    
-                    # Report every 5% increment for better visibility on small files
-                    if ($percent -ge ($lastReported[$job.FileName] + 5) -and $percent -lt 100) {
-                        $sizeMB = [math]::Round($currentSize / 1MB, 2)
-                        $targetMB = [math]::Round($job.TargetBytes / 1MB, 2)
-                        Write-Host "  $($job.FileName) : $percent% ($sizeMB MB / $targetMB MB)" -ForegroundColor Yellow
-                        $lastReported[$job.FileName] = $percent
-                    }
-                } catch {
-                    # File may be locked, skip this iteration
+        if (Test-Path $file) {
+            try {
+                if (-not $fileStarted[$job.FileName]) {
+                    $targetMB = [math]::Round($job.TargetBytes / 1MB, 2)
+                    Write-Host "  $($job.FileName) : Starting ($targetMB MB target)..." -ForegroundColor Cyan
+                    $fileStarted[$job.FileName] = $true
+                }
+                
+                $currentSize = (Get-Item $file).Length
+                $percent = [Math]::Floor(($currentSize / $job.TargetBytes) * 100)
+                
+                if ($percent -ge ($lastReported[$job.FileName] + 10) -and $percent -lt 100) {
+                    $sizeMB = [math]::Round($currentSize / 1MB, 2)
+                    $targetMB = [math]::Round($job.TargetBytes / 1MB, 2)
+                    Write-Host "  $($job.FileName) : $percent% ($sizeMB MB / $targetMB MB)" -ForegroundColor Yellow
+                    $lastReported[$job.FileName] = $percent
+                }
+            } catch { }
+        }
+    }
+}
+
+# Collect master file results
+Write-Host "`n--- Master Files Created ---" -ForegroundColor Green
+$masterSuccess = 0
+
+foreach ($job in $Jobs) {
+    try {
+        $result = $job.PowerShell.EndInvoke($job.Handle)
+        
+        if ($result) {
+            switch ($result.Status) {
+                'Success' {
+                    $file = "$folder\$($result.File)"
+                    $finalSize = [math]::Round((Get-Item $file).Length / 1MB, 2)
+                    Write-Host "  $($result.File) : COMPLETE ($finalSize MB)" -ForegroundColor Green
+                    $masterSuccess++
+                }
+                'Exists' {
+                    Write-Host "  $($result.File) : Already exists, will use for copying" -ForegroundColor Yellow
+                    $masterSuccess++
+                }
+                'Failed' {
+                    Write-Host "  $($result.File) : FAILED - $($result.Error)" -ForegroundColor Red
                 }
             }
         }
+    } catch {
+        Write-Host "  Job Error: $_" -ForegroundColor Red
     }
+    $job.PowerShell.Dispose()
+}
 
-    # ==============================================================================
-    # COLLECT BATCH RESULTS
-    # ==============================================================================
+$RunspacePool.Close()
+$RunspacePool.Dispose()
 
-    Write-Host "`n--- Batch $BatchNumber Results ---" -ForegroundColor Green
+$phaseElapsed = (Get-Date) - $phaseStartTime
+Write-Host "`nPhase 1 completed in $([math]::Round($phaseElapsed.TotalSeconds, 2)) seconds" -ForegroundColor Cyan
 
-    foreach ($job in $Jobs) {
+if ($masterSuccess -ne $UniqueFileSizes) {
+    Write-Host "`nERROR: Not all master files were created successfully. Aborting copy phase." -ForegroundColor Red
+    exit
+}
+
+# ==============================================================================
+# PHASE 2: COPY FILES (Fast file duplication)
+# ==============================================================================
+
+if ($fileCount -gt 1) {
+    Write-Host "`n--- PHASE 2: Copying Files ---" -ForegroundColor Green
+    Write-Host "Creating $($TotalFiles - $UniqueFileSizes) copies...`n" -ForegroundColor Gray
+
+    $copyStartTime = Get-Date
+    $copyCount = 0
+    $copyErrors = 0
+
+    foreach ($size in $fileSizes) {
+        $masterFile = $masterFiles[$size]
+        [int64]$sizeInKB = [int64]$size * ($multiplier / 1KB)
+        $paddedKB = $sizeInKB.ToString("D10")
+        
+        Write-Host "  Copying $size $metricLabel files..." -ForegroundColor Cyan
+        
+        for ($i = 1; $i -le $fileCount; $i++) {
+            $paddedNum = $i.ToString("D4")
+            $targetFile = "$folder\file_$paddedKB`_$paddedNum.csv"
+            
+            try {
+                if (Test-Path $targetFile) {
+                    $SkippedList.Add($targetFile)
+                    Write-Host "    file_$paddedKB`_$paddedNum.csv : SKIPPED (exists)" -ForegroundColor Yellow
+                } else {
+                    Copy-Item -Path $masterFile -Destination $targetFile -Force -ErrorAction Stop
+                    $SuccessList.Add($targetFile)
+                    $copyCount++
+                    
+                    # Show progress every 50 copies or for small batches
+                    if ($copyCount % 50 -eq 0 -or $fileCount -le 20) {
+                        Write-Host "    file_$paddedKB`_$paddedNum.csv : COPIED" -ForegroundColor Green
+                    }
+                }
+            } catch {
+                $FailedList.Add("$targetFile - Copy Error: $_")
+                $copyErrors++
+                Write-Host "    file_$paddedKB`_$paddedNum.csv : FAILED - $_" -ForegroundColor Red
+            }
+        }
+        
+        # Remove master file after copying
         try {
-            $result = $job.PowerShell.EndInvoke($job.Handle)
-            
-            if ($result) {
-                switch ($result.Status) {
-                    'Success' {
-                        $file = "$folder\$($result.File)"
-                        $finalSize = [math]::Round((Get-Item $file).Length / 1MB, 2)
-                        Write-Host "  $($result.File) : COMPLETE ($finalSize MB)" -ForegroundColor Green
-                        $ProcessedCount++
-                    }
-                    'Skipped' {
-                        Write-Host "  $($result.File) : SKIPPED (Already exists)" -ForegroundColor Yellow
-                        $ProcessedCount++
-                    }
-                    'Failed' {
-                        Write-Host "  $($result.File) : FAILED - $($result.Error)" -ForegroundColor Red
-                        $ProcessedCount++
-                    }
-                }
-            }
+            Remove-Item -Path $masterFile -Force -ErrorAction Stop
+            Write-Host "  Cleaned up master file" -ForegroundColor Gray
         } catch {
-            Write-Host "  Job Error: $_" -ForegroundColor Red
+            Write-Host "  Warning: Could not remove master file: $_" -ForegroundColor Yellow
         }
-        $job.PowerShell.Dispose()
     }
 
-    $RunspacePool.Close()
-    $RunspacePool.Dispose()
+    $copyElapsed = (Get-Date) - $copyStartTime
+    Write-Host "`nPhase 2 completed in $([math]::Round($copyElapsed.TotalSeconds, 2)) seconds" -ForegroundColor Cyan
+    Write-Host "Copy rate: $([math]::Round($copyCount / $copyElapsed.TotalSeconds, 2)) files/second" -ForegroundColor Cyan
 
-    $batchElapsed = (Get-Date) - $batchStartTime
-    $batchSeconds = [math]::Round($batchElapsed.TotalSeconds, 2)
+} else {
+    # Only 1 file per size - just rename master files
+    Write-Host "`n--- Renaming Master Files ---" -ForegroundColor Green
     
-    Write-Host "`nBatch $BatchNumber completed in $batchSeconds seconds" -ForegroundColor Cyan
-    Write-Host "Overall Progress: $ProcessedCount of $TotalFiles files processed" -ForegroundColor Magenta
-    
-    # Force garbage collection between batches
-    [System.GC]::Collect()
-    [System.GC]::WaitForPendingFinalizers()
-    
-    $BatchNumber++
+    foreach ($size in $fileSizes) {
+        $masterFile = $masterFiles[$size]
+        [int64]$sizeInKB = [int64]$size * ($multiplier / 1KB)
+        $paddedKB = $sizeInKB.ToString("D10")
+        $targetFile = "$folder\file_$paddedKB`_0001.csv"
+        
+        try {
+            Move-Item -Path $masterFile -Destination $targetFile -Force -ErrorAction Stop
+            $SuccessList.Add($targetFile)
+            Write-Host "  Renamed to file_$paddedKB`_0001.csv" -ForegroundColor Green
+        } catch {
+            $FailedList.Add("$targetFile - Rename Error: $_")
+            Write-Host "  Failed to rename: $_" -ForegroundColor Red
+        }
+    }
 }
 
 $elapsed = (Get-Date) - $startTime
