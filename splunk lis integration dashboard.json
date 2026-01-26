@@ -1,0 +1,1943 @@
+{
+    "title": "LIS | Integration Performance & Wait Operations Monitor | Studio",
+    "description": "",
+    "inputs": {
+        "input_fullpage_time_range": {
+            "options": {
+                "defaultValue": "-12h,now",
+                "token": "fullpage_time_range"
+            },
+            "title": "Full Page Time Range",
+            "type": "input.timerange"
+        },
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-60m,now",
+                "token": "time_range"
+            },
+            "title": "Main Tab Time Range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "dataSources": {
+            "ds.search": {
+                "options": {
+                    "refresh": "60s",
+                    "refreshType": "delay"
+                }
+            }
+        }
+    },
+    "visualizations": {
+        "viz_2vC7jN0d": {
+            "options": {
+                "content": "Dashboard monitors two critical integration issues:\n\n**Section 1: Integration Exceeding 20 Seconds**\n- Tracks /api/integration calls with time_taken > 20000ms\n- Shows errors by cs_username and Host\n\n**Section 2: Wait Operations Timed Out**\n- Tracks ambassador.log timeout events\n- Extracts method names from IntegrationService.Controllers.IntegrationController\n- Shows errors by method and Host\n\nAuto-refresh: 60s.\n\nHost tiles show count for selected time range; green=0, red>0.\nPicker total tiles: green=0, yellow=1-10, red>10.",
+                "customFontSize": 20,
+                "fontSize": "custom",
+                "markdown": "Wait Operation Timed Out",
+                "show": true
+            },
+            "title": "Dashboard Info",
+            "type": "splunk.markdown"
+        },
+        "viz_3IOgaCgh": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_fullpage_integration_by_time_range"
+            },
+            "description": "(based on Full Page Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "seriesColors": [
+                    "#d41f1f",
+                    "#ff69b4",
+                    "#ff8c00",
+                    "#f5c542",
+                    "#118832"
+                ],
+                "seriesColorsByField": {
+                    "0-5 seconds": "#118832",
+                    "11-20 seconds": "#ff8c00",
+                    "20-30 seconds": "#ff69b4",
+                    "30+ seconds": "#d41f1f",
+                    "6-10 seconds": "#f5c542"
+                },
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Count by Response Time Range (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_AcE7ov0D": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_VJ3wpfpa_ds_integration_by_time_range"
+            },
+            "description": "(based on Main Tab Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "seriesColors": [
+                    "#d41f1f",
+                    "#ff69b4",
+                    "#ff8c00",
+                    "#f5c542",
+                    "#118832"
+                ],
+                "seriesColorsByField": {
+                    "0-5 seconds": "#118832",
+                    "11-20 seconds": "#ff8c00",
+                    "20-30 seconds": "#ff69b4",
+                    "30+ seconds": "#d41f1f",
+                    "6-10 seconds": "#f5c542"
+                },
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Count by Response Time Range (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_Bs31HLi7": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 15
+            },
+            "type": "abslayout.line"
+        },
+        "viz_HiT7nOHx": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 15
+            },
+            "type": "abslayout.line"
+        },
+        "viz_Mf4zVOfx": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 5
+            },
+            "type": "abslayout.line"
+        },
+        "viz_QvcDDbrs": {
+            "options": {
+                "content": "Dashboard monitors two critical integration issues:\n\n**Section 1: Integration Exceeding 20 Seconds**\n- Tracks /api/integration calls with time_taken > 20000ms\n- Shows errors by cs_username and Host\n\n**Section 2: Wait Operations Timed Out**\n- Tracks ambassador.log timeout events\n- Extracts method names from IntegrationService.Controllers.IntegrationController\n- Shows errors by method and Host\n\nAuto-refresh: 60s.\n\nHost tiles show count for selected time range; green=0, red>0.\nPicker total tiles: green=0, yellow=1-10, red>10.",
+                "customFontSize": 20,
+                "fontSize": "custom",
+                "markdown": "Integration Event Errors",
+                "show": true
+            },
+            "title": "Dashboard Info",
+            "type": "splunk.markdown"
+        },
+        "viz_aFfoeIrg": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_lU7PiZCF_ds_fullpage_integration_by_time_range"
+            },
+            "description": "(based on Full Page Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "seriesColors": [
+                    "#d41f1f",
+                    "#ff69b4",
+                    "#ff8c00",
+                    "#f5c542",
+                    "#118832"
+                ],
+                "seriesColorsByField": {
+                    "0-5 seconds": "#118832",
+                    "11-20 seconds": "#ff8c00",
+                    "20-30 seconds": "#ff69b4",
+                    "30+ seconds": "#d41f1f",
+                    "6-10 seconds": "#f5c542"
+                },
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Count by Response Time Range (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_aQjJHwSn": {
+            "options": {
+                "backgroundColor": "#53a051",
+                "content": "Dashboard monitors two critical integration issues:\n\n**Section 1: Integration Exceeding 20 Seconds**\n- Tracks /api/integration calls with time_taken > 20000ms\n- Shows errors by cs_username and Host\n\n**Section 2: Wait Operations Timed Out**\n- Tracks ambassador.log timeout events\n- Extracts method names from IntegrationService.Controllers.IntegrationController\n- Shows errors by method and Host\n\nAuto-refresh: 60s.\n\nHost tiles show count for selected time range; green=0, red>0.\nPicker total tiles: green=0, yellow=1-10, red>10.",
+                "customFontSize": 18,
+                "fontColor": "#ffffff",
+                "fontSize": "custom",
+                "markdown": "**Current Status of System**",
+                "show": true
+            },
+            "title": "Dashboard Info",
+            "type": "splunk.markdown"
+        },
+        "viz_dtt301LG": {
+            "options": {
+                "backgroundColor": "#708794",
+                "content": "Dashboard monitors two critical integration issues:\n\n**Section 1: Integration Exceeding 20 Seconds**\n- Tracks /api/integration calls with time_taken > 20000ms\n- Shows errors by cs_username and Host\n\n**Section 2: Wait Operations Timed Out**\n- Tracks ambassador.log timeout events\n- Extracts method names from IntegrationService.Controllers.IntegrationController\n- Shows errors by method and Host\n\nAuto-refresh: 60s.\n\nHost tiles show count for selected time range; green=0, red>0.\nPicker total tiles: green=0, yellow=1-10, red>10.",
+                "customFontSize": 18,
+                "fontColor": "#000000",
+                "fontSize": "custom",
+                "markdown": "**Alert Graphs**",
+                "show": true
+            },
+            "title": "Dashboard Info",
+            "type": "splunk.markdown"
+        },
+        "viz_fZN6KzXc": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 5
+            },
+            "type": "abslayout.line"
+        },
+        "viz_fullpage_integration_by_host": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_fullpage_integration_by_host"
+            },
+            "description": "(based on Full Page Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Events - Errors by Host (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_fullpage_integration_by_username": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_fullpage_integration_by_username"
+            },
+            "description": "(based on Full Page Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Events - Errors by cs_username (stacked columns)",
+            "type": "splunk.column"
+        },
+        "viz_fullpage_waitop_by_host": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_fullpage_waitop_by_host"
+            },
+            "description": "(based on Full Page Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Wait Operations Timed Out Errors by Host (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_fullpage_waitop_by_method": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_fullpage_waitop_by_method"
+            },
+            "description": "(based on Full Page Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Wait Operations Timed Out | Wait Operations Timed Out Errors by Wait Operation Method (stacked columns)",
+            "type": "splunk.column"
+        },
+        "viz_hz9QUlnO": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 5
+            },
+            "type": "abslayout.line"
+        },
+        "viz_integration_by_host": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_by_host"
+            },
+            "description": "(based on Main Tab Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Events - Errors by Host (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_integration_by_username": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_by_username"
+            },
+            "description": "(based on Main Tab Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Integration Events - Errors by cs_username (stacked columns)",
+            "type": "splunk.column"
+        },
+        "viz_integration_errors_10m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_errors_10m"
+            },
+            "description": "Last 10 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_12h": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_hQ6RIDfV_ds_integration_errors_10m"
+            },
+            "description": "Last 12 Hours",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_15m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_errors_15m"
+            },
+            "description": "Last 15 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_24h": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_AjCvo2Gv_ds_integration_errors_15m"
+            },
+            "description": "Last 24 Hours",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_30m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_errors_30m"
+            },
+            "description": "Last 30 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_3d": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_0lMfDkAF_ds_integration_errors_30m"
+            },
+            "description": "Last 3 Days",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_4h": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_q76RhKeu_ds_integration_errors_5m"
+            },
+            "description": "Last 4 Hours",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_5m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_errors_5m"
+            },
+            "description": "Last 5 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_60m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_errors_60m"
+            },
+            "description": "Last 60 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_7d": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_oS1I5AYm_ds_integration_errors_60m"
+            },
+            "description": "Last 7 Days",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_errors_picker": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_errors_picker"
+            },
+            "options": {
+                "alignment": "center",
+                "backgroundColor": "> primary | seriesByName('color') | lastPoint()",
+                "majorColor": "#ffffff",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "Errors Count | Integration Exceeding 20 Seconds (IE20) (Based on time picker)",
+            "type": "splunk.singlevalue"
+        },
+        "viz_integration_events_table": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_integration_events_table"
+            },
+            "options": {
+                "count": 20,
+                "dataOverlayMode": "none",
+                "drilldown": "none",
+                "percentagesRow": false,
+                "refresh": 60,
+                "rowNumbers": false,
+                "totalsRow": false,
+                "wrap": true
+            },
+            "title": "Integration Events - Exceeding 20 Seconds (Based on Main Tab Time Range)",
+            "type": "splunk.table"
+        },
+        "viz_line_divider_1": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 5
+            },
+            "type": "abslayout.line"
+        },
+        "viz_sq0BMnHN": {
+            "options": {
+                "backgroundColor": "#fbd988",
+                "content": "Dashboard monitors two critical integration issues:\n\n**Section 1: Integration Exceeding 20 Seconds**\n- Tracks /api/integration calls with time_taken > 20000ms\n- Shows errors by cs_username and Host\n\n**Section 2: Wait Operations Timed Out**\n- Tracks ambassador.log timeout events\n- Extracts method names from IntegrationService.Controllers.IntegrationController\n- Shows errors by method and Host\n\nAuto-refresh: 60s.\n\nHost tiles show count for selected time range; green=0, red>0.\nPicker total tiles: green=0, yellow=1-10, red>10.",
+                "customFontSize": 18,
+                "fontColor": "#000000",
+                "fontSize": "custom",
+                "markdown": "**History of Alerts**",
+                "show": true
+            },
+            "title": "Dashboard Info",
+            "type": "splunk.markdown"
+        },
+        "viz_text_info": {
+            "options": {
+                "content": "Dashboard monitors two critical integration issues:\n\n**Section 1: Integration Exceeding 20 Seconds**\n- Tracks /api/integration calls with time_taken > 20000ms\n- Shows errors by cs_username and Host\n\n**Section 2: Wait Operations Timed Out**\n- Tracks ambassador.log timeout events\n- Extracts method names from IntegrationService.Controllers.IntegrationController\n- Shows errors by method and Host\n\nAuto-refresh: 60s.\n\nHost tiles show count for selected time range; green=0, red>0.\nPicker total tiles: green=0, yellow=1-10, red>10.",
+                "customFontSize": 20,
+                "fontSize": "custom",
+                "markdown": "Dashboard Description | Monitors Integration Performance Issues and Wait Operation Timeouts",
+                "show": true
+            },
+            "title": "Dashboard Info",
+            "type": "splunk.markdown"
+        },
+        "viz_waitop_by_host": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_by_host"
+            },
+            "description": "(based on Main Tab Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Wait Operations Timed Out Errors by Host (stacked)",
+            "type": "splunk.column"
+        },
+        "viz_waitop_by_method": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_by_method"
+            },
+            "description": "(based on Main Tab Time Range)",
+            "options": {
+                "dataValuesDisplay": "off",
+                "drilldown": "none",
+                "legendTruncation": "ellipsisMiddle",
+                "refresh": 60,
+                "showLegend": true,
+                "stackMode": "stacked",
+                "xAxisLabel": "Time",
+                "yAxisAbbreviation": "off",
+                "yAxisLabel": "Count"
+            },
+            "title": "Wait Operations Timed OutWait Operations Timed Out Errors by Wait Operation Method (stacked columns)",
+            "type": "splunk.column"
+        },
+        "viz_waitop_errors_10m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_errors_10m"
+            },
+            "description": "Last 10 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_12h": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_ZWbDkXqq_ds_waitop_errors_10m"
+            },
+            "description": "Last 12 Hours",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_15m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_errors_15m"
+            },
+            "description": "Last 15 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_24h": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_dneRvihL_ds_waitop_errors_15m"
+            },
+            "description": "Last 24 Hours",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_30m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_errors_30m"
+            },
+            "description": "Last 30 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_3d": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_tP8iDPfP_ds_waitop_errors_30m"
+            },
+            "description": "Last 3 Days",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_4h": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_MjXRXIHP_ds_waitop_errors_5m"
+            },
+            "description": "Last 4 Hours",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_5m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_errors_5m"
+            },
+            "description": "Last 5 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_60m": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_errors_60m"
+            },
+            "description": "Last 60 minutes",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_7d": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_Gkf8LnfP_ds_waitop_errors_60m"
+            },
+            "description": "Last 7 Days",
+            "options": {
+                "alignment": "center",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_errors_picker": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_errors_picker"
+            },
+            "options": {
+                "alignment": "center",
+                "backgroundColor": "> primary | seriesByName('color') | lastPoint()",
+                "majorColor": "#ffffff",
+                "numberFormat": "0",
+                "refresh": 60,
+                "showSparkline": false
+            },
+            "title": "Errors Count | Wait Operations Timed Out (Based on time picker)",
+            "type": "splunk.singlevalue"
+        },
+        "viz_waitop_events_table": {
+            "cornerRadius": [
+                25,
+                25,
+                25,
+                25
+            ],
+            "dataSources": {
+                "primary": "ds_waitop_events_table"
+            },
+            "options": {
+                "count": 20,
+                "dataOverlayMode": "none",
+                "drilldown": "none",
+                "percentagesRow": false,
+                "refresh": 60,
+                "rowNumbers": false,
+                "totalsRow": false,
+                "wrap": true
+            },
+            "title": "Wait Operation Events - Timed Out (Based on Main Tab Time Range)",
+            "type": "splunk.table"
+        },
+        "viz_xhWWdDrV": {
+            "options": {
+                "strokeColor": "#ffffff",
+                "strokeWidth": 5
+            },
+            "type": "abslayout.line"
+        }
+    },
+    "dataSources": {
+        "ds_0lMfDkAF_ds_integration_errors_30m": {
+            "name": "Integration Errors last 3 days",
+            "options": {
+                "earliest_time": "-3d",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-3d latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_7LfEqkQL_ds_integration_by_time_range": {
+            "name": "Integration Errors by cs_username (picker-aware with zero-fill)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$graph_time_range.earliest$\", l=\"$graph_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-4h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times, cs_username=\"ZZZTIMELINE\", count=0, marker=\"scaffold\" | fields _time cs_username count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | eval marker=\"event\" | fields _time cs_username marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, 0) | stats sum(count) as count by _time cs_username | xyseries _time cs_username count | fields - ZZZTIMELINE | fillnull value=0",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_9WtyYAi9_ds_integration_by_time_range": {
+            "name": "Integration Errors by Time Range (picker-aware with zero-fill) copy 1",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$graph_time_range.earliest$\", l=\"$graph_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-4h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval rangelist=\"0-5 seconds,6-10 seconds,11-20 seconds,20-30 seconds,30+ seconds\" | makemv delim=\",\" rangelist | mvexpand rangelist | eval time_range=rangelist, count=0, marker=\"scaffold\" | fields _time time_range count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | eval time_taken_sec=time_taken/1000 | eval time_range=case(time_taken_sec<=5, \"0-5 seconds\", time_taken_sec<=10, \"6-10 seconds\", time_taken_sec<=20, \"11-20 seconds\", time_taken_sec<=30, \"20-30 seconds\", 1=1, \"30+ seconds\") | eval marker=\"event\" | fields _time time_range marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time time_range | xyseries _time time_range count | eval \"0-5 seconds\"=coalesce('0-5 seconds',0) | eval \"6-10 seconds\"=coalesce('6-10 seconds',0) | eval \"11-20 seconds\"=coalesce('11-20 seconds',0) | eval \"20-30 seconds\"=coalesce('20-30 seconds',0) | eval \"30+ seconds\"=coalesce('30+ seconds',0) | fields _time \"30+ seconds\" \"20-30 seconds\" \"11-20 seconds\" \"6-10 seconds\" \"0-5 seconds\" | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_AjCvo2Gv_ds_integration_errors_15m": {
+            "name": "Integration Errors last 24 hours",
+            "options": {
+                "earliest_time": "-24h",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-24h latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_Gkf8LnfP_ds_waitop_errors_60m": {
+            "name": "Wait Operation Errors last 7 days",
+            "options": {
+                "earliest_time": "-7d",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-7d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_MjXRXIHP_ds_waitop_errors_5m": {
+            "name": "Wait Operation Errors last 4 hours",
+            "options": {
+                "earliest_time": "-4h",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-4h latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_VJ3wpfpa_ds_integration_by_time_range": {
+            "name": "Integration Errors by Time Range (Main Tab Time Range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval rangelist=\"0-5 seconds,6-10 seconds,11-20 seconds,20-30 seconds,30+ seconds\" | makemv delim=\",\" rangelist | mvexpand rangelist | eval time_range=rangelist, count=0, marker=\"scaffold\" | fields _time time_range count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | eval time_taken_sec=time_taken/1000 | eval time_range=case(time_taken_sec<=5, \"0-5 seconds\", time_taken_sec<=10, \"6-10 seconds\", time_taken_sec<=20, \"11-20 seconds\", time_taken_sec<=30, \"20-30 seconds\", 1=1, \"30+ seconds\") | eval marker=\"event\" | fields _time time_range marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time time_range | xyseries _time time_range count | eval \"0-5 seconds\"=coalesce('0-5 seconds',0) | eval \"6-10 seconds\"=coalesce('6-10 seconds',0) | eval \"11-20 seconds\"=coalesce('11-20 seconds',0) | eval \"20-30 seconds\"=coalesce('20-30 seconds',0) | eval \"30+ seconds\"=coalesce('30+ seconds',0) | fields _time \"30+ seconds\" \"20-30 seconds\" \"11-20 seconds\" \"6-10 seconds\" \"0-5 seconds\" | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_ZWbDkXqq_ds_waitop_errors_10m": {
+            "name": "Wait Operation Errors last 12 hours",
+            "options": {
+                "earliest_time": "-12h",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-12h latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_dneRvihL_ds_waitop_errors_15m": {
+            "name": "Wait Operation Errors last 24 hours",
+            "options": {
+                "earliest_time": "-24h",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-24h latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_fullpage_integration_by_host": {
+            "name": "Integration Errors by Host (fullpage time range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$fullpage_time_range.earliest$\", l=\"$fullpage_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-12h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval hostlist=\"plisweb04 plisweb05 plisweb06 plisweb07\" | makemv delim=\" \" hostlist | mvexpand hostlist | eval host=lower(trim(hostlist)), count=0, marker=\"scaffold\" | fields _time host count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken, host | where time_taken > 20000 | eval host=lower(trim(host)) | eval host=mvindex(split(host,\".\"),0) | where host IN (\"plisweb04\",\"plisweb05\",\"plisweb06\",\"plisweb07\") | eval marker=\"event\" | fields _time host marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time host | xyseries _time host count | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_fullpage_integration_by_time_range": {
+            "name": "Integration Count by Response Time Range (fullpage time range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$fullpage_time_range.earliest$\", l=\"$fullpage_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-12h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval rangelist=\"0-5 seconds,6-10 seconds,11-20 seconds,20-30 seconds,30+ seconds\" | makemv delim=\",\" rangelist | mvexpand rangelist | eval time_range=rangelist, count=0, marker=\"scaffold\" | fields _time time_range count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | eval time_taken_sec=time_taken/1000 | eval time_range=case(time_taken_sec<=5, \"0-5 seconds\", time_taken_sec<=10, \"6-10 seconds\", time_taken_sec<=20, \"11-20 seconds\", time_taken_sec<=30, \"20-30 seconds\", 1=1, \"30+ seconds\") | eval marker=\"event\" | fields _time time_range marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time time_range | xyseries _time time_range count | eval \"0-5 seconds\"=coalesce('0-5 seconds',0) | eval \"6-10 seconds\"=coalesce('6-10 seconds',0) | eval \"11-20 seconds\"=coalesce('11-20 seconds',0) | eval \"20-30 seconds\"=coalesce('20-30 seconds',0) | eval \"30+ seconds\"=coalesce('30+ seconds',0) | fields _time \"30+ seconds\" \"20-30 seconds\" \"11-20 seconds\" \"6-10 seconds\" \"0-5 seconds\" | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_fullpage_integration_by_username": {
+            "name": "Integration Errors by cs_username (fullpage time range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$fullpage_time_range.earliest$\", l=\"$fullpage_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-12h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times, cs_username=\"ZZZTIMELINE\", count=0, marker=\"scaffold\" | fields _time cs_username count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | eval marker=\"event\" | fields _time cs_username marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, 0) | stats sum(count) as count by _time cs_username | xyseries _time cs_username count | fields - ZZZTIMELINE | fillnull value=0",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_fullpage_waitop_by_host": {
+            "name": "Wait Operation Errors by Host (fullpage time range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$fullpage_time_range.earliest$\", l=\"$fullpage_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-12h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval hostlist=\"plisweb04 plisweb05 plisweb06 plisweb07\" | makemv delim=\" \" hostlist | mvexpand hostlist | eval host=lower(trim(hostlist)), count=0, marker=\"scaffold\" | fields _time host count start end step marker | append [ search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-366d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method, host | eval host=lower(trim(host)) | eval host=mvindex(split(host,\".\"),0) | where host IN (\"plisweb04\",\"plisweb05\",\"plisweb06\",\"plisweb07\") | eval marker=\"event\" | fields _time host marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time host | xyseries _time host count | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_fullpage_waitop_by_method": {
+            "name": "Wait Operation Errors by Method (fullpage time range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$fullpage_time_range.earliest$\", l=\"$fullpage_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-12h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times, method=\"ZZZTIMELINE\", count=0, marker=\"scaffold\" | fields _time method count start end step marker | append [ search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-366d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | eval marker=\"event\" | fields _time method marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, 0) | stats sum(count) as count by _time method | xyseries _time method count | fields - ZZZTIMELINE | fillnull value=0",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_hQ6RIDfV_ds_integration_errors_10m": {
+            "name": "Integration Errors last 12 hours",
+            "options": {
+                "earliest_time": "-12h",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-12h latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_by_host": {
+            "name": "Integration Errors by Host (picker-aware with zero-fill)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval hostlist=\"plisweb04 plisweb05 plisweb06 plisweb07\" | makemv delim=\" \" hostlist | mvexpand hostlist | eval host=lower(trim(hostlist)), count=0, marker=\"scaffold\" | fields _time host count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken, host | where time_taken > 20000 | eval host=lower(trim(host)) | eval host=mvindex(split(host,\".\"),0) | where host IN (\"plisweb04\",\"plisweb05\",\"plisweb06\",\"plisweb07\") | eval marker=\"event\" | fields _time host marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time host | xyseries _time host count | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_by_time_range": {
+            "name": "Integration Errors by Time Range (picker-aware with zero-fill)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$graph_time_range.earliest$\", l=\"$graph_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-4h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval rangelist=\"0-5 seconds,6-10 seconds,11-20 seconds,20-30 seconds,30+ seconds\" | makemv delim=\",\" rangelist | mvexpand rangelist | eval time_range=rangelist, count=0, marker=\"scaffold\" | fields _time time_range count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | eval time_taken_sec=time_taken/1000 | eval time_range=case(time_taken_sec<=5, \"0-5 seconds\", time_taken_sec<=10, \"6-10 seconds\", time_taken_sec<=20, \"11-20 seconds\", time_taken_sec<=30, \"20-30 seconds\", 1=1, \"30+ seconds\") | eval marker=\"event\" | fields _time time_range marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time time_range | xyseries _time time_range count | eval \"0-5 seconds\"=coalesce('0-5 seconds',0) | eval \"6-10 seconds\"=coalesce('6-10 seconds',0) | eval \"11-20 seconds\"=coalesce('11-20 seconds',0) | eval \"20-30 seconds\"=coalesce('20-30 seconds',0) | eval \"30+ seconds\"=coalesce('30+ seconds',0) | fields _time \"30+ seconds\" \"20-30 seconds\" \"11-20 seconds\" \"6-10 seconds\" \"0-5 seconds\" | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_by_username": {
+            "name": "Integration Errors by cs_username (picker-aware with time scaffold)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times, cs_username=\"ZZZTIMELINE\", count=0, marker=\"scaffold\" | fields _time cs_username count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | eval marker=\"event\" | fields _time cs_username marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, 0) | stats sum(count) as count by _time cs_username | xyseries _time cs_username count | fields - ZZZTIMELINE | fillnull value=0",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_errors_10m": {
+            "name": "Integration Errors last 10 minutes",
+            "options": {
+                "earliest_time": "-10m",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-10m latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_errors_15m": {
+            "name": "Integration Errors last 15 minutes",
+            "options": {
+                "earliest_time": "-15m",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-15m latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_errors_30m": {
+            "name": "Integration Errors last 30 minutes",
+            "options": {
+                "earliest_time": "-30m",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-30m latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_errors_5m": {
+            "name": "Integration Errors last 5 minutes",
+            "options": {
+                "earliest_time": "-5m",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-5m latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_errors_60m": {
+            "name": "Integration Errors last 60 minutes",
+            "options": {
+                "earliest_time": "-60m",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-60m latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_errors_picker": {
+            "name": "Integration Errors (time picker range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval marker=\"meta\", _time=0 | fields _time start end marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | eval marker=\"event\" | fields _time marker ] | eventstats max(start) as start max(end) as end | eval is_event=if(marker=\"event\" AND _time>=start AND _time<=end,1,0) | stats sum(is_event) as count | eval color=case(count=0,\"#118832\", count<=10,\"#f5c542\", 1=1,\"#d41f1f\") | table count color",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_integration_events_table": {
+            "name": "Integration Events Table (time picker range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-4h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval marker=\"meta\", _time=0 | fields _time start end marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time cs_uri_stem cs_username time_taken host | where time_taken > 20000 | eval marker=\"event\" | fields _time cs_uri_stem cs_username time_taken host marker ] | eventstats max(start) as start max(end) as end | where marker=\"event\" AND _time>=start AND _time<=end | eval time_taken_sec=round(time_taken/1000,2) | eval host=lower(trim(host)) | eval host=mvindex(split(host,\".\"),0) | fields _time cs_uri_stem cs_username time_taken_sec host | rename _time as \"Time\" cs_uri_stem as \"URI\" cs_username as \"Username\" time_taken_sec as \"Time Taken (sec)\" host as \"Host\" | sort - Time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_lU7PiZCF_ds_fullpage_integration_by_time_range": {
+            "name": "Integration Count by Response Time Range (fullpage time range) copy 1",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$fullpage_time_range.earliest$\", l=\"$fullpage_time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-12h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval rangelist=\"0-5 seconds,6-10 seconds,11-20 seconds,20-30 seconds,30+ seconds\" | makemv delim=\",\" rangelist | mvexpand rangelist | eval time_range=rangelist, count=0, marker=\"scaffold\" | fields _time time_range count start end step marker | append [ search index=plis_access \"/api/integration\" earliest=-366d latest=now | table _time, cs_uri_stem, cs_username, time_taken | eval time_taken_sec=time_taken/1000 | eval time_range=case(time_taken_sec<=5, \"0-5 seconds\", time_taken_sec<=10, \"6-10 seconds\", time_taken_sec<=20, \"11-20 seconds\", time_taken_sec<=30, \"20-30 seconds\", 1=1, \"30+ seconds\") | eval marker=\"event\" | fields _time time_range marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time time_range | xyseries _time time_range count | eval \"0-5 seconds\"=coalesce('0-5 seconds',0) | eval \"6-10 seconds\"=coalesce('6-10 seconds',0) | eval \"11-20 seconds\"=coalesce('11-20 seconds',0) | eval \"20-30 seconds\"=coalesce('20-30 seconds',0) | eval \"30+ seconds\"=coalesce('30+ seconds',0) | fields _time \"30+ seconds\" \"20-30 seconds\" \"11-20 seconds\" \"6-10 seconds\" \"0-5 seconds\" | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_oS1I5AYm_ds_integration_errors_60m": {
+            "name": "Integration Errors last 7 days",
+            "options": {
+                "earliest_time": "-7d",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-7d latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_q76RhKeu_ds_integration_errors_5m": {
+            "name": "Integration Errors last 4 hours",
+            "options": {
+                "earliest_time": "-4h",
+                "latest_time": "now",
+                "query": "search index=plis_access \"/api/integration\" earliest=-4h latest=now | table _time, cs_uri_stem, cs_username, time_taken | where time_taken > 20000 | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_tP8iDPfP_ds_waitop_errors_30m": {
+            "name": "Wait Operation Errors last 3 days",
+            "options": {
+                "earliest_time": "-3d",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-3d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_by_host": {
+            "name": "Wait Operation Errors by Host (picker-aware with zero-fill)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times | eval hostlist=\"plisweb04 plisweb05 plisweb06 plisweb07\" | makemv delim=\" \" hostlist | mvexpand hostlist | eval host=lower(trim(hostlist)), count=0, marker=\"scaffold\" | fields _time host count start end step marker | append [ search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-366d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method, host | eval host=lower(trim(host)) | eval host=mvindex(split(host,\".\"),0) | where host IN (\"plisweb04\",\"plisweb05\",\"plisweb06\",\"plisweb07\") | eval marker=\"event\" | fields _time host marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, count) | stats sum(count) as count by _time host | xyseries _time host count | sort 0 _time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_by_method": {
+            "name": "Wait Operation Errors by Method (picker-aware with time scaffold)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval range=end-start | eval step=case(range<86400,60, range<=604800,300, 1=1,900) | eval start=floor(start/step)*step, end=floor(end/step)*step | eval times=mvrange(start, end+step, step) | mvexpand times | eval _time=times, method=\"ZZZTIMELINE\", count=0, marker=\"scaffold\" | fields _time method count start end step marker | append [ search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-366d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | eval marker=\"event\" | fields _time method marker ] | eventstats max(start) as start max(end) as end max(step) as step | where marker=\"scaffold\" OR (marker=\"event\" AND _time>=start AND _time<=end) | eval _time=if(marker=\"event\", floor(_time/step)*step, _time) | eval count=if(marker=\"event\", 1, 0) | stats sum(count) as count by _time method | xyseries _time method count | fields - ZZZTIMELINE | fillnull value=0",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_errors_10m": {
+            "name": "Wait Operation Errors last 10 minutes",
+            "options": {
+                "earliest_time": "-10m",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-10m latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_errors_15m": {
+            "name": "Wait Operation Errors last 15 minutes",
+            "options": {
+                "earliest_time": "-15m",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-15m latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_errors_30m": {
+            "name": "Wait Operation Errors last 30 minutes",
+            "options": {
+                "earliest_time": "-30m",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-30m latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_errors_5m": {
+            "name": "Wait Operation Errors last 5 minutes",
+            "options": {
+                "earliest_time": "-5m",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-5m latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_errors_60m": {
+            "name": "Wait Operation Errors last 60 minutes",
+            "options": {
+                "earliest_time": "-60m",
+                "latest_time": "now",
+                "query": "search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-60m latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | stats count as total_errors",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_errors_picker": {
+            "name": "Wait Operation Errors (time picker range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-1h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval marker=\"meta\", _time=0 | fields _time start end marker | append [ search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-366d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time, user_id, method | eval marker=\"event\" | fields _time marker ] | eventstats max(start) as start max(end) as end | eval is_event=if(marker=\"event\" AND _time>=start AND _time<=end,1,0) | stats sum(is_event) as count | eval color=case(count=0,\"#118832\", count<=10,\"#f5c542\", 1=1,\"#d41f1f\") | table count color",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        },
+        "ds_waitop_events_table": {
+            "name": "Wait Operation Events Table (time picker range)",
+            "options": {
+                "earliest_time": "0",
+                "latest_time": "now",
+                "query": "| makeresults | eval e=\"$time_range.earliest$\", l=\"$time_range.latest$\" | rex field=e \"^(?<e_epoch>\\\\d+)$\" | rex field=l \"^(?<l_epoch>\\\\d+)$\" | eval start=case(isnotnull(e_epoch), tonumber(e_epoch), match(e,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(e,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), isnull(e) OR e=\"\", relative_time(now(), \"-4h\"), 1=1, relative_time(now(), e)) | eval end=case(isnotnull(l_epoch), tonumber(l_epoch), l=\"now\" OR l=\"\", now(), match(l,\"^\\\\d{4}-\\\\d{2}-\\\\d{2}T\"), strptime(l,\"%Y-%m-%dT%H:%M:%S.%3N%Z\"), 1=1, relative_time(now(), l)) | eval marker=\"meta\", _time=0 | fields _time start end marker | append [ search index=plis source=*ambassador.log \"The wait operation timed out\" earliest=-366d latest=now | rex field=_raw \"at IntegrationService\\\\.Controllers\\\\.IntegrationController\\\\.(?<method>.*?\\\\))\" | table _time user_id method host | eval marker=\"event\" | fields _time user_id method host marker ] | eventstats max(start) as start max(end) as end | where marker=\"event\" AND _time>=start AND _time<=end | eval host=lower(trim(host)) | eval host=mvindex(split(host,\".\"),0) | fields _time user_id method host | rename _time as \"Time\" user_id as \"User ID\" method as \"Method\" host as \"Host\" | sort - Time",
+                "refresh": "60s",
+                "refreshType": "delay"
+            },
+            "type": "ds.search"
+        }
+    },
+    "layout": {
+        "globalInputs": [
+            "input_time_range",
+            "input_fullpage_time_range"
+        ],
+        "layoutDefinitions": {
+            "layout_1": {
+                "options": {
+                    "height": 3500,
+                    "width": 1950
+                },
+                "structure": [
+                    {
+                        "item": "viz_Bs31HLi7",
+                        "position": {
+                            "from": {
+                                "x": 4,
+                                "y": 471
+                            },
+                            "to": {
+                                "x": 1947,
+                                "y": 471
+                            }
+                        },
+                        "type": "line"
+                    },
+                    {
+                        "item": "viz_text_info",
+                        "position": {
+                            "h": 30,
+                            "w": 1440,
+                            "x": 10,
+                            "y": 0
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_picker",
+                        "position": {
+                            "h": 70,
+                            "w": 940,
+                            "x": 10,
+                            "y": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_5m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 20,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_10m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 210,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_15m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 400,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_30m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 590,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_60m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 780,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_by_username",
+                        "position": {
+                            "h": 400,
+                            "w": 940,
+                            "x": 10,
+                            "y": 1040
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_by_host",
+                        "position": {
+                            "h": 400,
+                            "w": 940,
+                            "x": 10,
+                            "y": 630
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_events_table",
+                        "position": {
+                            "h": 800,
+                            "w": 940,
+                            "x": 20,
+                            "y": 1450
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_picker",
+                        "position": {
+                            "h": 70,
+                            "w": 940,
+                            "x": 980,
+                            "y": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_5m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 990,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_10m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1180,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_15m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1370,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_30m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1560,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_60m",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1750,
+                            "y": 150
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_by_method",
+                        "position": {
+                            "h": 400,
+                            "w": 940,
+                            "x": 980,
+                            "y": 1040
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_by_host",
+                        "position": {
+                            "h": 400,
+                            "w": 940,
+                            "x": 980,
+                            "y": 630
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_events_table",
+                        "position": {
+                            "h": 800,
+                            "w": 940,
+                            "x": 990,
+                            "y": 1450
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_4h",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 20,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_12h",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 210,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_24h",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 400,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_3d",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 590,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_integration_errors_7d",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 780,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_4h",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 990,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_12h",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1180,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_24h",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1370,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_3d",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1560,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_waitop_errors_7d",
+                        "position": {
+                            "h": 60,
+                            "w": 160,
+                            "x": 1750,
+                            "y": 510
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_AcE7ov0D",
+                        "position": {
+                            "h": 250,
+                            "w": 1910,
+                            "x": 10,
+                            "y": 210
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_aQjJHwSn",
+                        "position": {
+                            "h": 30,
+                            "w": 1910,
+                            "x": 10,
+                            "y": 40
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_sq0BMnHN",
+                        "position": {
+                            "h": 30,
+                            "w": 1910,
+                            "x": 10,
+                            "y": 480
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_HiT7nOHx",
+                        "position": {
+                            "from": {
+                                "x": 6,
+                                "y": 584
+                            },
+                            "to": {
+                                "x": 1949,
+                                "y": 584
+                            }
+                        },
+                        "type": "line"
+                    },
+                    {
+                        "item": "viz_dtt301LG",
+                        "position": {
+                            "h": 30,
+                            "w": 1910,
+                            "x": 10,
+                            "y": 590
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_fZN6KzXc",
+                        "position": {
+                            "from": {
+                                "x": 963,
+                                "y": 82
+                            },
+                            "to": {
+                                "x": 964,
+                                "y": 188
+                            }
+                        },
+                        "type": "line"
+                    },
+                    {
+                        "item": "viz_xhWWdDrV",
+                        "position": {
+                            "from": {
+                                "x": 965,
+                                "y": 517
+                            },
+                            "to": {
+                                "x": 965,
+                                "y": 563
+                            }
+                        },
+                        "type": "line"
+                    },
+                    {
+                        "item": "viz_Mf4zVOfx",
+                        "position": {
+                            "from": {
+                                "x": 965,
+                                "y": 630
+                            },
+                            "to": {
+                                "x": 967,
+                                "y": 1861
+                            }
+                        },
+                        "type": "line"
+                    }
+                ],
+                "type": "absolute"
+            },
+            "layout_2": {
+                "options": {
+                    "height": 2500,
+                    "width": 1950
+                },
+                "structure": [
+                    {
+                        "item": "viz_text_info",
+                        "position": {
+                            "h": 40,
+                            "w": 1440,
+                            "x": 0,
+                            "y": 0
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_fullpage_integration_by_username",
+                        "position": {
+                            "h": 420,
+                            "w": 1920,
+                            "x": 10,
+                            "y": 530
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_fullpage_integration_by_host",
+                        "position": {
+                            "h": 420,
+                            "w": 1920,
+                            "x": 10,
+                            "y": 960
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_line_divider_1",
+                        "position": {
+                            "from": {
+                                "x": 0,
+                                "y": 1389
+                            },
+                            "to": {
+                                "x": 1948,
+                                "y": 1389
+                            }
+                        },
+                        "type": "line"
+                    },
+                    {
+                        "item": "viz_fullpage_waitop_by_method",
+                        "position": {
+                            "h": 420,
+                            "w": 1920,
+                            "x": 10,
+                            "y": 1440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_fullpage_waitop_by_host",
+                        "position": {
+                            "h": 420,
+                            "w": 1920,
+                            "x": 10,
+                            "y": 1870
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_3IOgaCgh",
+                        "position": {
+                            "h": 420,
+                            "w": 1920,
+                            "x": 10,
+                            "y": 40
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_hz9QUlnO",
+                        "position": {
+                            "from": {
+                                "x": 2,
+                                "y": 475
+                            },
+                            "to": {
+                                "x": 1950,
+                                "y": 475
+                            }
+                        },
+                        "type": "line"
+                    },
+                    {
+                        "item": "viz_QvcDDbrs",
+                        "position": {
+                            "h": 40,
+                            "w": 1440,
+                            "x": 10,
+                            "y": 490
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_2vC7jN0d",
+                        "position": {
+                            "h": 40,
+                            "w": 1440,
+                            "x": 10,
+                            "y": 1400
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_aFfoeIrg",
+                        "position": {
+                            "h": 420,
+                            "w": 1920,
+                            "x": 450,
+                            "y": 50
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "submitButton": false
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "Main",
+                    "layoutId": "layout_1"
+                },
+                {
+                    "label": "Full Page Graphs",
+                    "layoutId": "layout_2"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "hideEdit": false,
+        "hideExport": false
+    }
+}
