@@ -1,16 +1,92 @@
 #requires -Version 5.1
-# ============================================================
-# File Copy / Move Speed Test with Logging, Throughput & ETA
-# Supports:
-#   - Individual File / Multiple Files / All Files in Directory
-#   - Copy or Move
-#   - Serial or Parallel whole-file operations
-#   - TXT / CSV / JSON / ALL logging
-#   - Screen / Log / Both output modes
-#   - Daily UTC log rollover (one file per type per UTC day)
-#   - Ordered fields across TXT / CSV / JSON
-#   - Copy GUID / CopyId for event correlation
-# ============================================================
+# ==============================================================================
+# SCRIPT NAME: File Copy / Move Utility
+# VERSION: 2.0
+# LAST UPDATED: 2026-03-28
+# AUTHOR: Kevin Ludwig / ChatGPT Collaboration
+# CONTEXT: FILE_TRANSFER_UTILITY_V2
+# ==============================================================================
+
+# ==============================================================================
+# DESCRIPTION
+# ------------------------------------------------------------------------------
+# High-performance PowerShell utility for copying or moving files with:
+# - Real-time progress monitoring (MB/s, ETA, Percent)
+# - Structured logging (TXT, CSV, JSON, ALL)
+# - Flexible file selection (Individual, Multiple, All)
+# - Wildcard file matching support
+# - Parallel processing (1–64 workers)
+# - Overwrite controls with [A]ll option
+# - Clean console output (mode-aware)
+# - UTC-based daily log rotation
+#
+# Designed for:
+# - File transfer testing
+# - Performance benchmarking
+# - Bulk operations
+# - Operational / production tooling
+# ==============================================================================
+
+# ==============================================================================
+# FEATURES
+# ------------------------------------------------------------------------------
+# ✔ Copy or Move operations
+# ✔ Individual file selection
+# ✔ Multiple file selection (wildcard + indexed selection)
+# ✔ All files in directory
+# ✔ Parallel file processing (configurable threads)
+# ✔ Structured logging with consistent schema
+# ✔ Real-time throughput metrics
+# ✔ CopyId (GUID) tracking for each file
+# ✔ Clean output modes (Screen, Log, Both)
+# ==============================================================================
+
+# ==============================================================================
+# PROMPT SYSTEM STANDARD
+# ------------------------------------------------------------------------------
+# All prompts follow:
+# - Bracket format: [X]Option | [Y]Option
+# - Single-letter input + Enter required
+# - Case-insensitive handling
+#
+# Example:
+# Action: [C]ontinue | [Q]uit
+# ==============================================================================
+
+# ==============================================================================
+# LOGGING BEHAVIOR
+# ------------------------------------------------------------------------------
+# - Logs are created per UTC day
+# - One file per day per log type
+# - Existing logs are appended
+# - Supports:
+#     TXT  -> Human readable
+#     CSV  -> Structured tabular
+#     JSON -> Structured object (NDJSON format)
+#
+# Log fields include:
+# Timestamp, CopyId, Status, FileName, Paths,
+# File sizes, Throughput, ETA, Duration, Errors
+# ==============================================================================
+
+# ==============================================================================
+# OUTPUT BEHAVIOR
+# ------------------------------------------------------------------------------
+# Individual Mode:
+#   - Full detail (header + summary + progress)
+#
+# Multiple / All Modes:
+#   - Progress only during execution
+#   - Final summary only (reduced noise)
+# ==============================================================================
+
+# ==============================================================================
+# NOTES
+# ------------------------------------------------------------------------------
+# - Parallel processing is whole-file based (no file splitting)
+# - Optimized for throughput and observability
+# - Designed to be safe for production usage
+# ==============================================================================
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
