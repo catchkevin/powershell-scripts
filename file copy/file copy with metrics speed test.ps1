@@ -1,95 +1,72 @@
 #requires -Version 5.1
-# ==============================================================================
-# SCRIPT NAME: File Copy / Move Utility
-# VERSION: 2.0
-# LAST UPDATED: 2026-03-28
-# AUTHOR: Kevin Ludwig / ChatGPT Collaboration
-# CONTEXT: FILE_TRANSFER_UTILITY_V2
-# ==============================================================================
-
-# ==============================================================================
-# DESCRIPTION
-# ------------------------------------------------------------------------------
-# High-performance PowerShell utility for copying or moving files with:
-# - Real-time progress monitoring (MB/s, ETA, Percent)
-# - Structured logging (TXT, CSV, JSON, ALL)
-# - Flexible file selection (Individual, Multiple, All)
-# - Wildcard file matching support
-# - Parallel processing (1–64 workers)
-# - Overwrite controls with [A]ll option
-# - Clean console output (mode-aware)
-# - UTC-based daily log rotation
-#
-# Designed for:
-# - File transfer testing
-# - Performance benchmarking
-# - Bulk operations
-# - Operational / production tooling
-# ==============================================================================
-
-# ==============================================================================
-# FEATURES
-# ------------------------------------------------------------------------------
-# ✔ Copy or Move operations
-# ✔ Individual file selection
-# ✔ Multiple file selection (wildcard + indexed selection)
-# ✔ All files in directory
-# ✔ Parallel file processing (configurable threads)
-# ✔ Structured logging with consistent schema
-# ✔ Real-time throughput metrics
-# ✔ CopyId (GUID) tracking for each file
-# ✔ Clean output modes (Screen, Log, Both)
-# ==============================================================================
-
-# ==============================================================================
-# PROMPT SYSTEM STANDARD
-# ------------------------------------------------------------------------------
-# All prompts follow:
-# - Bracket format: [X]Option | [Y]Option
-# - Single-letter input + Enter required
-# - Case-insensitive handling
-#
-# Example:
-# Action: [C]ontinue | [Q]uit
-# ==============================================================================
-
-# ==============================================================================
-# LOGGING BEHAVIOR
-# ------------------------------------------------------------------------------
-# - Logs are created per UTC day
-# - One file per day per log type
-# - Existing logs are appended
-# - Supports:
-#     TXT  -> Human readable
-#     CSV  -> Structured tabular
-#     JSON -> Structured object (NDJSON format)
-#
-# Log fields include:
-# Timestamp, CopyId, Status, FileName, Paths,
-# File sizes, Throughput, ETA, Duration, Errors
-# ==============================================================================
-
-# ==============================================================================
-# OUTPUT BEHAVIOR
-# ------------------------------------------------------------------------------
-# Individual Mode:
-#   - Full detail (header + summary + progress)
-#
-# Multiple / All Modes:
-#   - Progress only during execution
-#   - Final summary only (reduced noise)
-# ==============================================================================
-
-# ==============================================================================
-# NOTES
-# ------------------------------------------------------------------------------
-# - Parallel processing is whole-file based (no file splitting)
-# - Optimized for throughput and observability
-# - Designed to be safe for production usage
-# ==============================================================================
+# ============================================================
+# File Copy / Move Speed Test with Logging, Throughput & ETA
+# Supports:
+#   - Individual File / Multiple Files / All Files in Directory
+#   - Copy or Move
+#   - Serial or Parallel whole-file operations
+#   - TXT / CSV / JSON / ALL logging
+#   - Screen / Log / Both output modes
+#   - Daily UTC log rollover (one file per type per UTC day)
+#   - Ordered fields across TXT / CSV / JSON
+#   - Copy GUID / CopyId for event correlation
+# ============================================================
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# ==============================================================================
+# HEADER INFO
+# ==============================================================================
+$VariableContext = "File copy with metrics adn speed test"
+$LastUpdated     = "2026-03-28 20:00:00"
+
+# --- DESIGN: CONTEXT HEADER ---
+Write-Host "`n****************************************************" -ForegroundColor White
+Write-Host " CONTEXT: $VariableContext" -ForegroundColor Cyan
+Write-Host " UPDATED: $LastUpdated" -ForegroundColor Cyan
+Write-Host "****************************************************" -ForegroundColor White
+
+# --- DESIGN: PURPOSE AND PROMPTS HEADER ---
+Write-Host " Script Purpose:" -ForegroundColor Yellow
+Write-Host " Copy or move files with support for individual, multiple, or all"
+Write-Host " files in a directory, optional parallel processing, structured"
+Write-Host " logging, overwrite handling, real-time progress metrics, and"
+Write-Host " final execution summary details."
+Write-Host ""
+Write-Host " Input/Steps Required:" -ForegroundColor Yellow
+Write-Host " 1. Select whether to continue with the current terminal view or exit."
+Write-Host " 2. Select Copy or Move, then choose Individual, Multiple, or All files."
+Write-Host " 3. Select source, destination, output/logging options, and run the operation."
+Write-Host "****************************************************" -ForegroundColor White
+
+# --- INTERACTION: RUN/CLEAR/EXIT (Wait for Enter) ---
+Write-Host "`nDo you want to clear script terminal before running?" -ForegroundColor White
+$choice = Read-Host " [Y]es | [N]o | [E]xit"
+$selection = $choice.ToLower()
+
+switch ($selection) {
+    'e' {
+        Write-Host "`nExiting script..." -ForegroundColor Red
+        exit
+    }
+    'y' {
+        # Clear-Host (Commented out per user preference 2026-01-10)
+        Write-Host "Continuing with current terminal view..." -ForegroundColor Gray
+    }
+    'n' {
+        Write-Host "Proceeding..." -ForegroundColor Gray
+    }
+    Default {
+        Write-Host "`nInvalid selection. Exiting to prevent accidental execution." -ForegroundColor Red
+        exit
+    }
+}
+
+# ==============================================================================
+# START MAIN SCRIPT LOGIC BELOW
+# ==============================================================================
+Write-Host "`n--- Execution Started ---" -ForegroundColor Green
 
 # ------------------------------------------------------------
 # Script Metadata
@@ -1486,9 +1463,10 @@ function Invoke-FileCopyParallel {
         [pscustomobject]$InputObject
     )
 
-    Ensure-ThreadJobAvailable
-
     $script:DefaultList = @($InputObject.SourceFiles.Name)
+    $showPerFileOutput = ($InputObject.Mode -eq 'I')
+
+    Ensure-ThreadJobAvailable
 
     $queue = [System.Collections.Generic.Queue[object]]::new()
     foreach ($file in $InputObject.SourceFiles) {
@@ -1567,6 +1545,10 @@ function Invoke-FileCopyParallel {
                     $script:SkippedList += $file.Name
                     continue
                 }
+            }
+
+            if ($script:LogToConsole -and $showPerFileOutput) {
+                Show-CopyHeader -FileName $file.Name -SizeInfo $sizeInfo -LogDisplay (Get-DisplayLogPath) -ActionType $actionType
             }
 
             if ($script:LoggingEnabled) {
@@ -1951,15 +1933,6 @@ function Invoke-FileCopy {
 # Script Entry Point
 # ------------------------------------------------------------
 try {
-    Write-Host "`n****************************************************" -ForegroundColor White
-    $choice = Read-Host "Action: [C]ontinue | [Q]uit"
-    $selection = $choice.Trim().ToLower()
-
-    if ($selection -eq 'q') {
-        Write-Host "User requested exit." -ForegroundColor Red
-        exit
-    }
-
     $actionType = Read-ActionType
 
     Write-Host ('Starting script: {0}' -f $script:ScriptName) -ForegroundColor Cyan
