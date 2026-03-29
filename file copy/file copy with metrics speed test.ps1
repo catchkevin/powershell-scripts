@@ -10,6 +10,9 @@
 #   - Daily UTC log rollover (one file per type per UTC day)
 #   - Ordered fields across TXT / CSV / JSON
 #   - Copy GUID / CopyId for event correlation
+#   - Optional debug logging for progress events
+#   - ISO 8601 UTC logging timestamps
+#   - Log Session ID per script run
 # ============================================================
 
 Set-StrictMode -Version Latest
@@ -18,12 +21,20 @@ $ErrorActionPreference = 'Stop'
 # ==============================================================================
 # HEADER INFO
 # ==============================================================================
-$VariableContext = "File copy with metrics adn speed test"
-$LastUpdated     = "2026-03-28 20:00:00"
+$VariableContext = "File copy with metrics and speed test"
+$VariableVersion = "Version 2.0"
+
+$LastUpdatedUTC = "2026-03-29 15:34:33.000"
+$LastUpdatedET  = "2026-03-29 11:34:33.000"
+$LastUpdatedCT  = "2026-03-29 10:34:33.000"
+$LastUpdatedMT  = "2026-03-29 09:34:33.000"
+$LastUpdatedPT  = "2026-03-29 08:34:33.000"
+$LastUpdated    = $LastUpdatedUTC
 
 # --- DESIGN: CONTEXT HEADER ---
 Write-Host "`n****************************************************" -ForegroundColor White
 Write-Host " CONTEXT: $VariableContext" -ForegroundColor Cyan
+Write-Host " VERSION: $VariableVersion" -ForegroundColor Cyan
 Write-Host " UPDATED: $LastUpdated" -ForegroundColor Cyan
 Write-Host "****************************************************" -ForegroundColor White
 
@@ -31,13 +42,13 @@ Write-Host "****************************************************" -ForegroundCol
 Write-Host " Script Purpose:" -ForegroundColor Yellow
 Write-Host " Copy or move files with support for individual, multiple, or all"
 Write-Host " files in a directory, optional parallel processing, structured"
-Write-Host " logging, overwrite handling, real-time progress metrics, and"
-Write-Host " final execution summary details."
+Write-Host " logging, overwrite handling, real-time progress metrics, optional"
+Write-Host " debug logging, and final execution summary details."
 Write-Host ""
 Write-Host " Input/Steps Required:" -ForegroundColor Yellow
 Write-Host " 1. Select whether to continue with the current terminal view or exit."
 Write-Host " 2. Select Copy or Move, then choose Individual, Multiple, or All files."
-Write-Host " 3. Select source, destination, output/logging options, and run the operation."
+Write-Host " 3. Select source, destination, output/logging/debug options, and run the operation."
 Write-Host "****************************************************" -ForegroundColor White
 
 # --- INTERACTION: RUN/CLEAR/EXIT (Wait for Enter) ---
@@ -93,11 +104,22 @@ $script:LogToConsole     = $true
 $script:OutputMode       = 'both'
 
 # ------------------------------------------------------------
+# Debug Logging State
+# ------------------------------------------------------------
+$script:DebugEnabled     = $false
+$script:DebugMode        = $null
+$script:DebugTXTPath     = $null
+$script:DebugCSVPath     = $null
+$script:DebugJSONPath    = $null
+$script:DebugLogDay      = $null
+
+# ------------------------------------------------------------
 # Script Run State
 # ------------------------------------------------------------
-$script:RunStartTime        = $null
-$script:RunEndTime          = $null
-$script:OverwriteAllMode    = $false
+$script:RunStartTime     = $null
+$script:RunEndTime       = $null
+$script:OverwriteAllMode = $false
+$script:LogSessionId     = [guid]::NewGuid().Guid
 
 # ------------------------------------------------------------
 # Summary Arrays
@@ -112,6 +134,7 @@ $script:FailedList  = @()
 # ------------------------------------------------------------
 $script:LogFieldOrder = @(
     'Timestamp',
+    'LogSessionId',
     'CopyId',
     'EventType',
     'Status',
@@ -156,6 +179,21 @@ function Read-YesNo {
         switch ($inputValue) {
             'y' { return $true }
             'n' { return $false }
+            default { }
+        }
+    }
+}
+
+function Read-DebugMode {
+    [CmdletBinding()]
+    param()
+
+    while ($true) {
+        $raw = (Read-Host 'Debug Mode: [I]nsert in existing logs | Separate [D]ebug Log File and Current Log Files "Both"').Trim().ToLower()
+
+        switch ($raw) {
+            'i' { return 'I' }
+            'd' { return 'D' }
             default { }
         }
     }
@@ -330,7 +368,18 @@ function Get-Timestamp {
     [CmdletBinding()]
     param()
 
-    Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+}
+
+function Get-LogDateTimeIso {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [datetime]$DateTimeValue
+    )
+
+    $utcValue = $DateTimeValue.ToUniversalTime()
+    return $utcValue.ToString('yyyy-MM-ddTHH:mm:ssZ')
 }
 
 function Get-UtcNow {
@@ -368,7 +417,7 @@ function Convert-ToFlatString {
     }
 
     if ($Value -is [System.DateTime]) {
-        return $Value.ToString('yyyy-MM-dd HH:mm:ss')
+        return ([datetime]$Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
 
     $text = [string]$Value
@@ -392,6 +441,17 @@ function Get-DisplayLogPath {
         'all'  { return ($script:LogTXTPath, $script:LogCSVPath, $script:LogJSONPath) -join '; ' }
         default { return 'Logging Disabled' }
     }
+}
+
+function Get-DebugDisplayLogPath {
+    [CmdletBinding()]
+    param()
+
+    if (-not $script:DebugEnabled) {
+        return ''
+    }
+
+    return ($script:DebugTXTPath, $script:DebugCSVPath, $script:DebugJSONPath) -join '; '
 }
 
 function Get-FileSizeInfo {
@@ -739,11 +799,12 @@ function New-LogFiles {
 
         if (-not (Test-Path $script:LogTXTPath)) {
             Add-Content -Path $script:LogTXTPath -Value ('=' * 70)
-            Add-Content -Path $script:LogTXTPath -Value ('Script Name : {0}' -f $script:ScriptName)
-            Add-Content -Path $script:LogTXTPath -Value ('Started UTC : {0}' -f (Get-UtcNow).ToString('yyyy-MM-dd HH:mm:ss'))
-            Add-Content -Path $script:LogTXTPath -Value ('Computer    : {0}' -f $env:COMPUTERNAME)
-            Add-Content -Path $script:LogTXTPath -Value ('User        : {0}' -f $env:USERNAME)
-            Add-Content -Path $script:LogTXTPath -Value ('UTC Day     : {0}' -f $utcDay)
+            Add-Content -Path $script:LogTXTPath -Value ('Script Name   : {0}' -f $script:ScriptName)
+            Add-Content -Path $script:LogTXTPath -Value ('Session ID    : {0}' -f $script:LogSessionId)
+            Add-Content -Path $script:LogTXTPath -Value ('Started UTC   : {0}' -f (Get-LogDateTimeIso -DateTimeValue (Get-UtcNow)))
+            Add-Content -Path $script:LogTXTPath -Value ('Computer      : {0}' -f $env:COMPUTERNAME)
+            Add-Content -Path $script:LogTXTPath -Value ('User          : {0}' -f $env:USERNAME)
+            Add-Content -Path $script:LogTXTPath -Value ('UTC Day       : {0}' -f $utcDay)
             Add-Content -Path $script:LogTXTPath -Value ('=' * 70)
             Add-Content -Path $script:LogTXTPath -Value ''
         }
@@ -786,9 +847,126 @@ function Ensure-LogFiles {
     }
 }
 
+function New-DebugLogFiles {
+    [CmdletBinding()]
+    param()
+
+    if (-not $script:DebugEnabled) { return }
+
+    if (-not (Test-Path -Path $script:LogFolder)) {
+        New-Item -Path $script:LogFolder -ItemType Directory -Force | Out-Null
+    }
+
+    $utcDay = Get-UtcDayStamp
+    $script:DebugLogDay = $utcDay
+
+    $script:DebugTXTPath  = Join-Path $script:LogFolder ("{0}_{1}_debug.txt"  -f $script:LogBaseName, $utcDay)
+    $script:DebugCSVPath  = Join-Path $script:LogFolder ("{0}_{1}_debug.csv"  -f $script:LogBaseName, $utcDay)
+    $script:DebugJSONPath = Join-Path $script:LogFolder ("{0}_{1}_debug.json" -f $script:LogBaseName, $utcDay)
+
+    if (-not (Test-Path $script:DebugTXTPath)) {
+        Add-Content -Path $script:DebugTXTPath -Value ('=' * 70)
+        Add-Content -Path $script:DebugTXTPath -Value ('Script Name   : {0}' -f $script:ScriptName)
+        Add-Content -Path $script:DebugTXTPath -Value ('Session ID    : {0}' -f $script:LogSessionId)
+        Add-Content -Path $script:DebugTXTPath -Value ('Started UTC   : {0}' -f (Get-LogDateTimeIso -DateTimeValue (Get-UtcNow)))
+        Add-Content -Path $script:DebugTXTPath -Value ('Computer      : {0}' -f $env:COMPUTERNAME)
+        Add-Content -Path $script:DebugTXTPath -Value ('User          : {0}' -f $env:USERNAME)
+        Add-Content -Path $script:DebugTXTPath -Value ('UTC Day       : {0}' -f $utcDay)
+        Add-Content -Path $script:DebugTXTPath -Value ('=' * 70)
+        Add-Content -Path $script:DebugTXTPath -Value ''
+    }
+}
+
+function Ensure-DebugLogFiles {
+    [CmdletBinding()]
+    param()
+
+    if (-not $script:DebugEnabled) { return }
+
+    $utcDay = Get-UtcDayStamp
+
+    $needsNewDebugFiles =
+        (-not $script:DebugLogDay) -or
+        ($script:DebugLogDay -ne $utcDay) -or
+        (-not $script:DebugTXTPath) -or
+        (-not $script:DebugCSVPath) -or
+        (-not $script:DebugJSONPath) -or
+        ($script:DebugTXTPath  -notmatch ("_{0}_debug\.txt$"  -f $utcDay)) -or
+        ($script:DebugCSVPath  -notmatch ("_{0}_debug\.csv$"  -f $utcDay)) -or
+        ($script:DebugJSONPath -notmatch ("_{0}_debug\.json$" -f $utcDay))
+
+    if ($needsNewDebugFiles) {
+        $script:DebugTXTPath  = $null
+        $script:DebugCSVPath  = $null
+        $script:DebugJSONPath = $null
+        New-DebugLogFiles
+    }
+}
+
 # ------------------------------------------------------------
 # Logging Writers
 # ------------------------------------------------------------
+function Write-StructuredTextLogToPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [hashtable]$Data
+    )
+
+    $orderedData = New-OrderedLogRow -Row $Data
+
+    $pairs = foreach ($field in $script:LogFieldOrder) {
+        '{0}={1}' -f $field, $orderedData[$field]
+    }
+
+    Add-Content -Path $Path -Value (($pairs -join ' | '))
+}
+
+function Write-StructuredCsvLogToPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [hashtable]$Row
+    )
+
+    $orderedRow = New-OrderedLogRow -Row $Row
+    $obj = [PSCustomObject]$orderedRow
+
+    if (-not (Test-Path -Path $Path)) {
+        $obj | Export-Csv -Path $Path -NoTypeInformation
+        return
+    }
+
+    $fileInfo = Get-Item -Path $Path -ErrorAction SilentlyContinue
+    if ($fileInfo -and $fileInfo.Length -eq 0) {
+        $obj | Export-Csv -Path $Path -NoTypeInformation
+    }
+    else {
+        $obj | Export-Csv -Path $Path -NoTypeInformation -Append
+    }
+}
+
+function Write-StructuredJsonLogToPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [hashtable]$Row
+    )
+
+    $orderedObject = New-OrderedLogRow -Row $Row
+    $jsonLine = ($orderedObject | ConvertTo-Json -Compress -Depth 5)
+    Add-Content -Path $Path -Value $jsonLine
+}
+
 function Write-StructuredTextLog {
     [CmdletBinding()]
     param(
@@ -801,13 +979,7 @@ function Write-StructuredTextLog {
     Ensure-LogFiles
     if (-not $script:LogTXTPath) { return }
 
-    $orderedData = New-OrderedLogRow -Row $Data
-
-    $pairs = foreach ($field in $script:LogFieldOrder) {
-        '{0}={1}' -f $field, $orderedData[$field]
-    }
-
-    Add-Content -Path $script:LogTXTPath -Value (($pairs -join ' | '))
+    Write-StructuredTextLogToPath -Path $script:LogTXTPath -Data $Data
 }
 
 function Write-StructuredCsvLog {
@@ -822,21 +994,7 @@ function Write-StructuredCsvLog {
     Ensure-LogFiles
     if (-not $script:LogCSVPath) { return }
 
-    $orderedRow = New-OrderedLogRow -Row $Row
-    $obj = [PSCustomObject]$orderedRow
-
-    if (-not (Test-Path -Path $script:LogCSVPath)) {
-        $obj | Export-Csv -Path $script:LogCSVPath -NoTypeInformation
-        return
-    }
-
-    $fileInfo = Get-Item -Path $script:LogCSVPath -ErrorAction SilentlyContinue
-    if ($fileInfo -and $fileInfo.Length -eq 0) {
-        $obj | Export-Csv -Path $script:LogCSVPath -NoTypeInformation
-    }
-    else {
-        $obj | Export-Csv -Path $script:LogCSVPath -NoTypeInformation -Append
-    }
+    Write-StructuredCsvLogToPath -Path $script:LogCSVPath -Row $Row
 }
 
 function Write-StructuredJsonLog {
@@ -851,9 +1009,39 @@ function Write-StructuredJsonLog {
     Ensure-LogFiles
     if (-not $script:LogJSONPath) { return }
 
-    $orderedObject = New-OrderedLogRow -Row $Row
-    $jsonLine = ($orderedObject | ConvertTo-Json -Compress -Depth 5)
-    Add-Content -Path $script:LogJSONPath -Value $jsonLine
+    Write-StructuredJsonLogToPath -Path $script:LogJSONPath -Row $Row
+}
+
+function Write-DebugLogEvent {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [hashtable]$Row
+    )
+
+    if (-not $script:DebugEnabled) { return }
+    if ($script:DebugMode -ne 'D') { return }
+
+    Ensure-DebugLogFiles
+
+    if (-not $Row.ContainsKey('Timestamp')) {
+        $Row.Timestamp = Get-Timestamp
+    }
+
+    $debugRow = @{}
+    foreach ($key in $Row.Keys) {
+        $debugRow[$key] = $Row[$key]
+    }
+
+    if (-not $debugRow.ContainsKey('LogSessionId')) {
+        $debugRow.LogSessionId = $script:LogSessionId
+    }
+
+    $debugRow.LogFile = Get-DebugDisplayLogPath
+
+    Write-StructuredTextLogToPath -Path $script:DebugTXTPath -Data $debugRow
+    Write-StructuredCsvLogToPath  -Path $script:DebugCSVPath -Row  $debugRow
+    Write-StructuredJsonLogToPath -Path $script:DebugJSONPath -Row $debugRow
 }
 
 function Write-LogEvent {
@@ -871,18 +1059,50 @@ function Write-LogEvent {
         $Row.Timestamp = Get-Timestamp
     }
 
-    $Row.LogFile = Get-DisplayLogPath
-
-    if ($script:LogType -eq 'txt' -or $script:LogType -eq 'all') {
-        Write-StructuredTextLog -Data $Row
+    if (-not $Row.ContainsKey('LogSessionId')) {
+        $Row.LogSessionId = $script:LogSessionId
     }
 
-    if ($script:LogType -eq 'csv' -or $script:LogType -eq 'all') {
-        Write-StructuredCsvLog -Row $Row
+    $status = ''
+    if ($Row.ContainsKey('Status')) {
+        $status = [string]$Row.Status
     }
 
-    if ($script:LogType -eq 'json' -or $script:LogType -eq 'all') {
-        Write-StructuredJsonLog -Row $Row
+    $isProgressEvent = ($status -eq 'Progress')
+    $writeToMainLogs = $true
+
+    if ($isProgressEvent) {
+        if (-not $script:DebugEnabled) {
+            $writeToMainLogs = $false
+        }
+        elseif ($script:DebugMode -eq 'D') {
+            $writeToMainLogs = $false
+        }
+    }
+
+    if ($writeToMainLogs) {
+        $mainRow = @{}
+        foreach ($key in $Row.Keys) {
+            $mainRow[$key] = $Row[$key]
+        }
+
+        $mainRow.LogFile = Get-DisplayLogPath
+
+        if ($script:LogType -eq 'txt' -or $script:LogType -eq 'all') {
+            Write-StructuredTextLog -Data $mainRow
+        }
+
+        if ($script:LogType -eq 'csv' -or $script:LogType -eq 'all') {
+            Write-StructuredCsvLog -Row $mainRow
+        }
+
+        if ($script:LogType -eq 'json' -or $script:LogType -eq 'all') {
+            Write-StructuredJsonLog -Row $mainRow
+        }
+    }
+
+    if ($script:DebugEnabled -and $script:DebugMode -eq 'D') {
+        Write-DebugLogEvent -Row $Row
     }
 }
 
@@ -928,8 +1148,20 @@ function Initialize-Logging {
         $script:LogFolder = Read-Host 'Enter full folder path for log files'
     }
 
+    $script:DebugEnabled = Read-YesNo "Debug Enable?"
+    if ($script:DebugEnabled) {
+        $script:DebugMode = Read-DebugMode
+    }
+    else {
+        $script:DebugMode = $null
+    }
+
     $script:LogPathDisplayed = $false
     Ensure-LogFiles
+
+    if ($script:DebugEnabled -and $script:DebugMode -eq 'D') {
+        Ensure-DebugLogFiles
+    }
 }
 
 # ------------------------------------------------------------
@@ -956,6 +1188,7 @@ function Show-ScriptSummary {
     Write-Host "Copy Start Time:  $copyStartTime" -ForegroundColor White
     Write-Host "Copy End Time:    $copyEndTime" -ForegroundColor White
     Write-Host "Copy Duration:    $copyDuration" -ForegroundColor White
+    Write-Host "Session ID:       $($script:LogSessionId)" -ForegroundColor White
     Write-Host "Total Expected:   $($expectedItems.Count)" -ForegroundColor White
     Write-Host "Total Copied:     $($copiedItems.Count)" -ForegroundColor Green
     Write-Host "Total Skipped:    $($skippedItems.Count)" -ForegroundColor Yellow
@@ -1115,6 +1348,7 @@ function Copy-OneFileSerial {
             if ($script:LoggingEnabled) {
                 Write-LogEvent -Row @{
                     Timestamp         = Get-Timestamp
+                    LogSessionId      = $script:LogSessionId
                     CopyId            = $copyId
                     EventType         = $eventType
                     Status            = 'Skipped'
@@ -1163,6 +1397,7 @@ function Copy-OneFileSerial {
     if ($script:LoggingEnabled) {
         Write-LogEvent -Row @{
             Timestamp         = Get-Timestamp
+            LogSessionId      = $script:LogSessionId
             CopyId            = $copyId
             EventType         = $eventType
             Status            = 'Start'
@@ -1231,12 +1466,13 @@ function Copy-OneFileSerial {
                     $eta = '00:00:00'
                 }
 
-                $ts = $now.ToString('yyyy-MM-dd HH:mm:ss')
+                $displayTs = $now.ToString('yyyy-MM-dd HH:mm:ss')
+                $logTs = Get-LogDateTimeIso -DateTimeValue $now
 
                 if ($script:LogToConsole) {
                     Write-Host (
                         '{0} | {1,6}% | {2,8:N0}/{3,8:N0} MB | {4,6} MB/s | ETA {5} | CopyId {6} | ParallelCount {7}' -f
-                        $ts,
+                        $displayTs,
                         $percent,
                         ($bytesCopied / 1MB),
                         ($fileSize / 1MB),
@@ -1249,7 +1485,8 @@ function Copy-OneFileSerial {
 
                 if ($script:LoggingEnabled) {
                     Write-LogEvent -Row @{
-                        Timestamp         = $ts
+                        Timestamp         = $logTs
+                        LogSessionId      = $script:LogSessionId
                         CopyId            = $copyId
                         EventType         = $eventType
                         Status            = 'Progress'
@@ -1298,13 +1535,14 @@ function Copy-OneFileSerial {
         }
 
         $finalPercent = 100
-        $finalTs = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        $finalDisplayTs = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        $finalLogTs = Get-Timestamp
         $finalEta = '00:00:00'
 
         if ($script:LogToConsole -and $bytesCopied -gt 0) {
             Write-Host (
                 '{0} | {1,6}% | {2,8:N0}/{3,8:N0} MB | {4,6} MB/s | ETA {5} | CopyId {6} | ParallelCount {7}' -f
-                $finalTs,
+                $finalDisplayTs,
                 $finalPercent,
                 ($bytesCopied / 1MB),
                 ($fileSize / 1MB),
@@ -1317,7 +1555,8 @@ function Copy-OneFileSerial {
 
         if ($script:LoggingEnabled -and $bytesCopied -gt 0) {
             Write-LogEvent -Row @{
-                Timestamp         = $finalTs
+                Timestamp         = $finalLogTs
+                LogSessionId      = $script:LogSessionId
                 CopyId            = $copyId
                 EventType         = $eventType
                 Status            = 'Progress'
@@ -1364,6 +1603,7 @@ function Copy-OneFileSerial {
         if ($script:LoggingEnabled) {
             Write-LogEvent -Row @{
                 Timestamp         = Get-Timestamp
+                LogSessionId      = $script:LogSessionId
                 CopyId            = $copyId
                 EventType         = $eventType
                 Status            = 'Complete'
@@ -1405,6 +1645,7 @@ function Copy-OneFileSerial {
         if ($script:LoggingEnabled) {
             Write-LogEvent -Row @{
                 Timestamp         = Get-Timestamp
+                LogSessionId      = $script:LogSessionId
                 CopyId            = $copyId
                 EventType         = $eventType
                 Status            = 'Failed'
@@ -1513,6 +1754,7 @@ function Invoke-FileCopyParallel {
                     if ($script:LoggingEnabled) {
                         Write-LogEvent -Row @{
                             Timestamp         = Get-Timestamp
+                            LogSessionId      = $script:LogSessionId
                             CopyId            = $copyId
                             EventType         = $eventType
                             Status            = 'Skipped'
@@ -1554,6 +1796,7 @@ function Invoke-FileCopyParallel {
             if ($script:LoggingEnabled) {
                 Write-LogEvent -Row @{
                     Timestamp         = Get-Timestamp
+                    LogSessionId      = $script:LogSessionId
                     CopyId            = $copyId
                     EventType         = $eventType
                     Status            = 'Start'
@@ -1592,7 +1835,8 @@ function Invoke-FileCopyParallel {
                 $workerId,
                 $copyMethod,
                 $parallelCount,
-                $actionType
+                $actionType,
+                $script:LogSessionId
             ) -ScriptBlock {
                 param(
                     $sourcePath,
@@ -1603,7 +1847,8 @@ function Invoke-FileCopyParallel {
                     $workerId,
                     $copyMethod,
                     $parallelCount,
-                    $actionType
+                    $actionType,
+                    $logSessionId
                 )
 
                 $eventType = if ($actionType -eq 'Move') { 'FileMove' } else { 'FileCopy' }
@@ -1663,7 +1908,8 @@ function Invoke-FileCopyParallel {
                             }
 
                             $events.Add([PSCustomObject]@{
-                                Timestamp         = $now.ToString('yyyy-MM-dd HH:mm:ss')
+                                Timestamp         = $now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                                LogSessionId      = $logSessionId
                                 CopyId            = $copyId
                                 EventType         = $eventType
                                 Status            = 'Progress'
@@ -1712,7 +1958,8 @@ function Invoke-FileCopyParallel {
 
                     if ($bytesCopied -gt 0) {
                         $events.Add([PSCustomObject]@{
-                            Timestamp         = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                            Timestamp         = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                            LogSessionId      = $logSessionId
                             CopyId            = $copyId
                             EventType         = $eventType
                             Status            = 'Progress'
@@ -1753,7 +2000,8 @@ function Invoke-FileCopyParallel {
                     [PSCustomObject]@{
                         ResultType        = 'Complete'
                         ActionType        = $actionType
-                        Timestamp         = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                        Timestamp         = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        LogSessionId      = $logSessionId
                         CopyId            = $copyId
                         EventType         = $eventType
                         Status            = 'Complete'
@@ -1787,7 +2035,8 @@ function Invoke-FileCopyParallel {
                     [PSCustomObject]@{
                         ResultType        = 'Failed'
                         ActionType        = $actionType
-                        Timestamp         = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                        Timestamp         = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        LogSessionId      = $logSessionId
                         CopyId            = $copyId
                         EventType         = $eventType
                         Status            = 'Failed'
@@ -1849,7 +2098,7 @@ function Invoke-FileCopyParallel {
                         $displayMBps = if ([string]::IsNullOrWhiteSpace([string]$evt.MBps)) { 0 } else { [double]$evt.MBps }
                         Write-Host (
                             '{0} | {1,6}% | {2,8:N0}/{3,8:N0} MB | {4,6} MB/s | ETA {5} | CopyId {6} | ParallelCount {7}' -f
-                            $evt.Timestamp,
+                            (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'),
                             [double]$evt.Percent,
                             ([double]$evt.BytesTransferred / 1MB),
                             [double]$evt.FileSizeMB,
@@ -1939,6 +2188,7 @@ try {
 
     $script:RunStartTime = Get-Date
     $script:OverwriteAllMode = $false
+    $script:LogSessionId = [guid]::NewGuid().Guid
 
     $inputs = Read-ScriptInputs -ActionType $actionType
     Initialize-Logging
