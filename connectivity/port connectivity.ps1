@@ -1,8 +1,8 @@
 # ==============================================================================
 # SCRIPT:  port connectivity.ps1
 # CONTEXT: TCP_PORT_CONNECTIVITY_TESTER
-# VERSION: V5
-# UPDATED: 2026-06-30 00:00:00
+# VERSION: V6
+# UPDATED: 2026-10-28 00:00:00
 # ==============================================================================
 
 # ==============================================================================
@@ -40,8 +40,8 @@
 # ==============================================================================
 
 $VariableContext = "TCP_PORT_CONNECTIVITY_TESTER"
-$Version         = "V5"
-$LastUpdated     = "2026-06-30 00:00:00"
+$Version         = "V6"
+$LastUpdated     = "2026-10-28 00:00:00"
 $ScriptName      = $MyInvocation.MyCommand.Name
 
 # ==============================================================================
@@ -60,11 +60,13 @@ Write-Host " DNS (PTR) lookup per target, and resolves this machine's"
 Write-Host " own source host name/IP once at startup. Outputs a"
 Write-Host " single grouped summary line per target showing source,"
 Write-Host " destination, and Good/Failed ports."
-Write-Host " Supports single-target and CSV file input modes."
+Write-Host " Supports single-target, multiple-target, and CSV file"
+Write-Host " input modes (multiple = up to 10 entered one at a time)."
 Write-Host " Logs every individual port test as a separate entry."
 Write-Host ""
 Write-Host " Input/Steps Required:"                                 -ForegroundColor Yellow
-Write-Host " 1. Choose single IP/DNS target or CSV input file."
+Write-Host " 1. Choose single IP/DNS target, multiple targets, or"
+Write-Host "    CSV input file."
 Write-Host " 2. Enter one or more ports (comma or space separated)."
 Write-Host " 3. Set a test interval (0 = run once)."
 Write-Host " 4. Enter an optional comment."
@@ -846,6 +848,40 @@ function Invoke-TargetTest {
 }
 
 # ==============================================================================
+# MULTIPLE TARGET PROMPT - one at a time until [D]one (or Enter) or max reached
+# ==============================================================================
+function Read-MultipleTargets {
+    param([int]$Max = 10)
+
+    $list = @()
+    Write-Host (" Enter up to {0} targets (IP/DNS). Type D (or press Enter) when done." -f $Max) -ForegroundColor Gray
+    while ($list.Count -lt $Max) {
+        $n   = $list.Count + 1
+        $raw = if ($n -eq 1) { (Read-Host " Enter target #1").Trim() }
+               else          { (Read-Host (" Enter target #{0} | [D]one" -f $n)).Trim() }
+
+        if ($raw -match '^(d|done)?$') {
+            if ($list.Count -eq 0) {
+                Write-Host " At least one target is required." -ForegroundColor Yellow
+                continue
+            }
+            break
+        }
+
+        if ($raw -in $list) {
+            Write-Host " $raw is already in the list - skipped." -ForegroundColor Yellow
+            continue
+        }
+        $list += $raw
+    }
+
+    if ($list.Count -ge $Max) { Write-Host (" Maximum of {0} targets reached." -f $Max) -ForegroundColor Yellow }
+    Write-Host (" {0} target(s) entered:" -f $list.Count) -ForegroundColor Gray
+    foreach ($t in $list) { Write-Host "   - $t" -ForegroundColor Gray }
+    return ,$list
+}
+
+# ==============================================================================
 # MAIN
 # ==============================================================================
 Write-Host "`n****************************************************" -ForegroundColor White
@@ -863,9 +899,9 @@ Write-Host (" Source Host -> {0}" -f $script:SourceDisplayLabel) -ForegroundColo
 Write-Host "****************************************************" -ForegroundColor White
 
 $TestType = ""
-while ($TestType -notin @('1','2')) {
-    $TestType = (Read-Host " Test Mode: [1] Single target | [2] Input file").Trim()
-    if ($TestType -notin @('1','2')) {
+while ($TestType -notin @('1','2','3')) {
+    $TestType = (Read-Host " Test Mode: [1] Single target | [2] Multiple targets (up to 10) | [3] Input file").Trim()
+    if ($TestType -notin @('1','2','3')) {
         Write-Host " Invalid entry. Please select a valid option." -ForegroundColor Yellow
     }
 }
@@ -908,7 +944,7 @@ if ($TestType -eq '1') {
         Start-Sleep -Seconds $Interval
     }
 
-} elseif ($TestType -eq '2') {
+} elseif ($TestType -eq '3') {
 
     Write-Host "`n****************************************************" -ForegroundColor White
     Write-Host " Input File Setup"                                       -ForegroundColor Yellow
@@ -989,6 +1025,58 @@ if ($TestType -eq '1') {
                 TargetInput     = $InputFilePath
                 TCPResultDetail = 'All targets in file processed'
                 Comment         = ''
+            }
+
+        if ($Interval -le 0) { break }
+        Start-Sleep -Seconds $Interval
+    }
+
+} elseif ($TestType -eq '2') {
+
+    $Targets = Read-MultipleTargets -Max 10
+
+    $PortRaw = Read-Host " Enter port(s) to test against ALL targets - comma or space separated (e.g. 443 80 22)"
+    $Ports   = Parse-Ports -PortInput $PortRaw
+
+    while ($Ports.Count -eq 0) {
+        Write-Host " No valid ports found. Please try again." -ForegroundColor Yellow
+        $PortRaw = Read-Host " Enter port(s) - comma or space separated"
+        $Ports   = Parse-Ports -PortInput $PortRaw
+    }
+
+    $IntervalRaw = Read-Host ' Enter interval in seconds ("0" = run once)'
+    $Interval    = 0
+    while (-not [int]::TryParse($IntervalRaw, [ref]$Interval)) {
+        Write-Host " Invalid interval. Please enter a whole number." -ForegroundColor Yellow
+        $IntervalRaw = Read-Host ' Enter interval in seconds ("0" = run once)'
+    }
+
+    $Comment = Read-Host " Enter comment for all targets (optional - press Enter to skip)"
+
+    Initialize-Logging -ContextKey 'multiplehosts'
+
+    Write-LogEvent -Level INFO -Status 'SESSION_START' `
+        -Message ("Session started. Mode=MultipleTargets Targets={0} Ports={1} Interval={2}s" -f ($Targets -join ' '), ($Ports -join ','), $Interval) `
+        -Data @{
+            TargetInput     = ($Targets -join ' ')
+            TestedPort      = ($Ports -join ',')
+            TCPResultDetail = "Interval=$Interval"
+            Comment         = $Comment
+        }
+
+    while ($true) {
+        foreach ($Target in $Targets) {
+            Invoke-TargetTest -Target $Target -Ports $Ports -Comment $Comment
+        }
+
+        Write-Host "`n[Batch Complete] $(Get-Date -Format 'MM.dd.yyyy | hh:mm:ss tt')" -ForegroundColor Blue
+
+        Write-LogEvent -Level INFO -Status 'BATCH_COMPLETE' `
+            -Message ("Batch complete at {0}" -f (Get-Timestamp)) `
+            -Data @{
+                TargetInput     = ($Targets -join ' ')
+                TCPResultDetail = 'All entered targets processed'
+                Comment         = $Comment
             }
 
         if ($Interval -le 0) { break }

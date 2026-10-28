@@ -1,7 +1,7 @@
 # ==============================================================================
 # SCRIPT:  url connectivity.ps1
 # CONTEXT: URL_CURL_CONNECTIVITY_TESTER
-# VERSION: V1
+# VERSION: V2
 # UPDATED: 2026-10-28 00:00:00
 # ==============================================================================
 
@@ -43,7 +43,7 @@
 # ==============================================================================
 
 $VariableContext = "URL_CURL_CONNECTIVITY_TESTER"
-$Version         = "V1"
+$Version         = "V2"
 $LastUpdated     = "2026-10-28 00:00:00"
 $ScriptName      = $MyInvocation.MyCommand.Name
 
@@ -70,13 +70,14 @@ Write-Host " machine's own source host name/IP once at startup."
 Write-Host " Outputs a single line per URL showing source, destination,"
 Write-Host " HTTP status, response time, and SUCCESS/FAILED."
 Write-Host " Status 200-399 = SUCCESS, anything else = FAILED."
-Write-Host " Supports single-URL and CSV file input modes, run once"
-Write-Host " or continuously on an interval."
+Write-Host " Supports single-URL, multiple-URL (up to 10 entered one"
+Write-Host " at a time), and CSV file input modes, run once or"
+Write-Host " continuously on an interval."
 Write-Host ""
 Write-Host " Input/Steps Required:"                                 -ForegroundColor Yellow
-Write-Host " 1. Choose single URL or CSV input file."
+Write-Host " 1. Choose single URL, multiple URLs, or CSV input file."
 Write-Host " 2. Set a test interval (0 = run once)."
-Write-Host " 3. Enter an optional comment (single URL mode)."
+Write-Host " 3. Enter an optional comment (single/multiple URL mode)."
 Write-Host " 4. Configure output mode (Screen / Log File / Both)."
 Write-Host " 5. Source host (this machine) is identified automatically"
 Write-Host "    - no input required."
@@ -847,6 +848,39 @@ function Read-Interval {
     return $Interval
 }
 
+# Prompts for URLs one at a time until [D]one (or Enter) or the max is reached.
+function Read-MultipleUrls {
+    param([int]$Max = 10)
+
+    $list = @()
+    Write-Host (" Enter up to {0} URLs. Type D (or press Enter) when done." -f $Max) -ForegroundColor Gray
+    while ($list.Count -lt $Max) {
+        $n   = $list.Count + 1
+        $raw = if ($n -eq 1) { (Read-Host " Enter URL #1").Trim() }
+               else          { (Read-Host (" Enter URL #{0} | [D]one" -f $n)).Trim() }
+
+        if ($raw -match '^(d|done)?$') {
+            if ($list.Count -eq 0) {
+                Write-Host " At least one URL is required." -ForegroundColor Yellow
+                continue
+            }
+            break
+        }
+
+        $url = Normalize-Url -Url $raw
+        if ($url -in $list) {
+            Write-Host " $url is already in the list - skipped." -ForegroundColor Yellow
+            continue
+        }
+        $list += $url
+    }
+
+    if ($list.Count -ge $Max) { Write-Host (" Maximum of {0} URLs reached." -f $Max) -ForegroundColor Yellow }
+    Write-Host (" {0} URL(s) entered:" -f $list.Count) -ForegroundColor Gray
+    foreach ($u in $list) { Write-Host "   - $u" -ForegroundColor Gray }
+    return ,$list
+}
+
 # ==============================================================================
 # MAIN
 # ==============================================================================
@@ -865,9 +899,9 @@ Write-Host (" Source Host -> {0}" -f $script:SourceDisplayLabel) -ForegroundColo
 Write-Host "****************************************************" -ForegroundColor White
 
 $TestType = ""
-while ($TestType -notin @('1','2')) {
-    $TestType = (Read-Host " Test Mode: [1] Single URL | [2] Input file").Trim()
-    if ($TestType -notin @('1','2')) {
+while ($TestType -notin @('1','2','3')) {
+    $TestType = (Read-Host " Test Mode: [1] Single URL | [2] Multiple URLs (up to 10) | [3] Input file").Trim()
+    if ($TestType -notin @('1','2','3')) {
         Write-Host " Invalid entry. Please select a valid option." -ForegroundColor Yellow
     }
 }
@@ -893,7 +927,7 @@ if ($TestType -eq '1') {
     $SourceLabel = $Url
     $ModeLabel   = 'SingleUrl'
 
-} elseif ($TestType -eq '2') {
+} elseif ($TestType -eq '3') {
 
     Write-Host "`n****************************************************" -ForegroundColor White
     Write-Host " Input File Setup"                                       -ForegroundColor Yellow
@@ -931,6 +965,17 @@ if ($TestType -eq '1') {
     $ContextKey  = 'multipleurls'
     $SourceLabel = $InputFilePath
     $ModeLabel   = 'FileInput'
+
+} elseif ($TestType -eq '2') {
+
+    $Urls     = Read-MultipleUrls -Max 10
+    $Interval = Read-Interval
+    $Comment  = Read-Host " Enter comment for all URLs (optional - press Enter to skip)"
+
+    foreach ($u in $Urls) { $UrlEntries += @{ Url = $u; Comment = $Comment } }
+    $ContextKey  = 'multipleurls'
+    $SourceLabel = ($Urls -join ' ')
+    $ModeLabel   = 'MultipleUrls'
 }
 
 Initialize-Logging -ContextKey $ContextKey
