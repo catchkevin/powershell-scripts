@@ -1,13 +1,47 @@
 # ==============================================================================
-# SCRIPT:  Test-PortConnectivity.ps1
+# SCRIPT:  port connectivity.ps1
 # CONTEXT: TCP_PORT_CONNECTIVITY_TESTER
-# VERSION: V3
-# UPDATED: 2026-06-26 00:00:00
+# VERSION: V5
+# UPDATED: 2026-06-30 00:00:00
+# ==============================================================================
+
+# ==============================================================================
+# HOW TO RUN THIS SCRIPT
+# ------------------------------------------------------------------------------
+# This script takes NO command-line parameters - every input (target, ports,
+# interval, comment, output mode, log format, log folder, debug mode) is
+# gathered through interactive prompts at runtime. Nothing to pass on the
+# command line.
+#
+# Option 1 - Run as a saved .ps1 file (recommended):
+#   1. Save this file as: port connectivity.ps1
+#   2. Open PowerShell and navigate to the folder containing the file.
+#   3. Run:  .\port connectivity.ps1
+#      (If the filename has a space, either quote it or use the call operator:
+#       & ".\port connectivity.ps1"   )
+#   4. Follow the on-screen prompts.
+#   When run this way, the default log folder offered at the logging prompt
+#   will be a "Logs" subfolder created next to this script file.
+#
+# Option 2 - Paste directly into an open PowerShell console:
+#   1. Copy the entire script.
+#   2. Paste into a running PowerShell window and press Enter.
+#   3. Follow the on-screen prompts.
+#   When run this way, there is no script file path to anchor to, so the
+#   default log folder offered will instead be a "Logs" subfolder created
+#   next to your current working directory (wherever the console session
+#   is currently pointed). You can always choose [C]ustom at the log folder
+#   prompt to specify a different path regardless of how you ran it.
+#
+# Execution Policy:
+#   If running as a saved .ps1 and PowerShell blocks it, you may need to
+#   allow script execution for the current session:
+#     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 # ==============================================================================
 
 $VariableContext = "TCP_PORT_CONNECTIVITY_TESTER"
-$Version         = "V3"
-$LastUpdated     = "2026-06-26 00:00:00"
+$Version         = "V5"
+$LastUpdated     = "2026-06-30 00:00:00"
 $ScriptName      = $MyInvocation.MyCommand.Name
 
 # ==============================================================================
@@ -22,8 +56,10 @@ Write-Host "****************************************************"   -ForegroundC
 Write-Host " Script Purpose:"                                       -ForegroundColor Yellow
 Write-Host " Tests TCP connectivity from this host to one or more"
 Write-Host " targets across one or more ports. Performs a reverse"
-Write-Host " DNS (PTR) lookup per target. Outputs a single grouped"
-Write-Host " summary line per target showing Good and Failed ports."
+Write-Host " DNS (PTR) lookup per target, and resolves this machine's"
+Write-Host " own source host name/IP once at startup. Outputs a"
+Write-Host " single grouped summary line per target showing source,"
+Write-Host " destination, and Good/Failed ports."
 Write-Host " Supports single-target and CSV file input modes."
 Write-Host " Logs every individual port test as a separate entry."
 Write-Host ""
@@ -33,6 +69,23 @@ Write-Host " 2. Enter one or more ports (comma or space separated)."
 Write-Host " 3. Set a test interval (0 = run once)."
 Write-Host " 4. Enter an optional comment."
 Write-Host " 5. Configure output mode (Screen / Log File / Both)."
+Write-Host " 6. Source host (this machine) is identified automatically"
+Write-Host "    - no input required."
+Write-Host ""
+Write-Host " CSV Input File Format Example:"                        -ForegroundColor Yellow
+Write-Host " ----------------------------------------"
+Write-Host " Target,Ports,Comment"
+Write-Host " server01.domain.local,80 443 3389,"
+Write-Host " 10.0.5.45,,Backup link check"
+Write-Host " server02.domain.local,22,"
+Write-Host " ----------------------------------------"
+Write-Host " Notes:"
+Write-Host "  - Header row is optional; a first column value of"
+Write-Host "    'ip', 'dns', or 'target' is auto-detected and skipped."
+Write-Host "  - Column 2 (Ports) is optional per row and, if present,"
+Write-Host "    overrides the ports entered at the prompt for that row."
+Write-Host "  - Column 3 or 4 is used as Comment. Legacy 'S'/'SE'"
+Write-Host "    values in column 3 are ignored, not treated as a comment."
 Write-Host "****************************************************"   -ForegroundColor White
 
 $runChoice = ""
@@ -84,11 +137,19 @@ $script:DebugCSVPath     = $null
 $script:DebugJSONPath    = $null
 $script:DebugLogDay      = $null
 
-# Comment field added to field order
+# Source host identity - resolved once at startup, reused for entire session
+$script:SourceHostName     = ''
+$script:SourceHostIP       = ''
+$script:SourceDisplayLabel = ''
+
+# SourceHostName/SourceHostIP added - new fields for the machine running the
+# script. The existing SourceIP field is unchanged (per-connection local IP).
 $script:LogFieldOrder = @(
     'Timestamp',
     'LogSessionId',
     'ScriptName',
+    'SourceHostName',
+    'SourceHostIP',
     'Level',
     'Status',
     'Message',
@@ -181,6 +242,7 @@ function New-LogFiles {
             Add-Content -Path $script:LogTXTPath -Value ('Script Name  : {0}' -f $ScriptName)
             Add-Content -Path $script:LogTXTPath -Value ('Session ID   : {0}' -f $script:LogSessionId)
             Add-Content -Path $script:LogTXTPath -Value ('Started UTC  : {0}' -f (Get-Timestamp))
+            Add-Content -Path $script:LogTXTPath -Value ('Source Host  : {0}' -f $script:SourceDisplayLabel)
             Add-Content -Path $script:LogTXTPath -Value ('Computer     : {0}' -f $env:COMPUTERNAME)
             Add-Content -Path $script:LogTXTPath -Value ('User         : {0}' -f $env:USERNAME)
             Add-Content -Path $script:LogTXTPath -Value ('UTC Day      : {0}' -f $utcDay)
@@ -208,7 +270,6 @@ function Ensure-LogFiles {
         $script:LogTXTPath = $script:LogCSVPath = $script:LogJSONPath = $null
         New-LogFiles
     }
-    # Path display is handled once in Initialize-Logging — not here
 }
 
 function New-DebugLogFiles {
@@ -226,6 +287,7 @@ function New-DebugLogFiles {
         Add-Content -Path $script:DebugTXTPath -Value ('Script Name  : {0}' -f $ScriptName)
         Add-Content -Path $script:DebugTXTPath -Value ('Session ID   : {0}' -f $script:LogSessionId)
         Add-Content -Path $script:DebugTXTPath -Value ('Started UTC  : {0}' -f (Get-Timestamp))
+        Add-Content -Path $script:DebugTXTPath -Value ('Source Host  : {0}' -f $script:SourceDisplayLabel)
         Add-Content -Path $script:DebugTXTPath -Value ('Computer     : {0}' -f $env:COMPUTERNAME)
         Add-Content -Path $script:DebugTXTPath -Value ('User         : {0}' -f $env:USERNAME)
         Add-Content -Path $script:DebugTXTPath -Value ('UTC Day      : {0}' -f $utcDay)
@@ -291,8 +353,8 @@ function Write-DebugLogEvent {
 
 # ==============================================================================
 # PRIMARY LOG ENTRY POINT -- file only, never console
-# Write-LogEvent writes to log files only. All screen output is handled
-# exclusively by Write-TargetSummaryLine and explicit Write-Host calls.
+# SourceHostName/SourceHostIP are injected from script-level state on every
+# call automatically - no caller needs to pass them in -Data.
 # ==============================================================================
 function Write-LogEvent {
     param(
@@ -310,6 +372,8 @@ function Write-LogEvent {
         Timestamp       = Get-Timestamp
         LogSessionId    = $script:LogSessionId
         ScriptName      = $ScriptName
+        SourceHostName  = $script:SourceHostName
+        SourceHostIP    = $script:SourceHostIP
         Level           = $Level
         Status          = $Status
         Message         = $Message
@@ -342,11 +406,6 @@ function Write-LogEvent {
 
 # ==============================================================================
 # LOGGING INITIALIZATION  (design template - logging and output v2)
-# Output mode drives everything:
-#   [S]creen  -> console only,  no file logging
-#   [L]og     -> file only,     no console output
-#   [B]oth    -> console + file logging
-# No secondary "enable file logging" prompt needed — L and B imply it.
 # ==============================================================================
 function Read-OutputMode {
     while ($true) {
@@ -420,7 +479,20 @@ function Read-YesNo {
 }
 
 function Initialize-Logging {
-    param([string]$ContextKey, [string]$DefaultLogFolder = (Join-Path -Path $PSScriptRoot -ChildPath 'Logs'))
+    param(
+        [string]$ContextKey,
+        [string]$DefaultLogFolder = $null
+    )
+
+    # Resolve a safe default folder at RUNTIME, not at parameter-bind time.
+    # $PSScriptRoot is empty when this script is pasted into an interactive
+    # console rather than run as a saved .ps1 file. Computing the default
+    # here (inside the function body) instead of in the param() block
+    # prevents Join-Path from throwing before Read-OutputMode is ever called.
+    if ([string]::IsNullOrWhiteSpace($DefaultLogFolder)) {
+        $baseRoot = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { $PSScriptRoot } else { (Get-Location).Path }
+        $DefaultLogFolder = Join-Path -Path $baseRoot -ChildPath 'Logs'
+    }
 
     Write-Host "`n****************************************************" -ForegroundColor White
     Write-Host " Logging and Output Setup"                              -ForegroundColor Cyan
@@ -430,7 +502,6 @@ function Initialize-Logging {
 
     switch ($script:OutputMode) {
         'screen' {
-            # Screen only — no file logging, no further prompts needed
             $script:LogToConsole   = $true
             $script:LoggingEnabled = $false
             Write-Host " Screen-only mode. File logging disabled." -ForegroundColor Yellow
@@ -438,18 +509,15 @@ function Initialize-Logging {
             return
         }
         'log' {
-            # Log file only — suppress all console output during testing
             $script:LogToConsole   = $false
             $script:LoggingEnabled = $true
         }
         'both' {
-            # Console + log file
             $script:LogToConsole   = $true
             $script:LoggingEnabled = $true
         }
     }
 
-    # L and B both reach here — file logging is implied, no extra prompt
     $script:LogType     = Read-LogType
     $script:LogFolder   = Read-LogFolderMode -DefaultFolder $DefaultLogFolder
     $script:LogBaseName = ('{0}_{1}' -f (Get-SafeFileKey -Value $ScriptName), (Get-SafeFileKey -Value $ContextKey)).ToLower()
@@ -463,7 +531,6 @@ function Initialize-Logging {
 
     if ($script:DebugEnabled -and $script:DebugMode -eq 'D') { Ensure-DebugLogFiles }
 
-    # Show log path on screen once — this is the only log-related console output
     Write-Host (" Logging Active -> {0}" -f (Get-DisplayLogPath)) -ForegroundColor Cyan
     $script:LogPathDisplayed = $true
 
@@ -489,6 +556,7 @@ function Show-ScriptSummary {
     Write-Host "`n--- $Title ---"                                    -ForegroundColor Blue
     Write-Host " Script:          $ScriptName"                      -ForegroundColor Cyan
     Write-Host " Session ID:      $($script:LogSessionId)"          -ForegroundColor Cyan
+    Write-Host " Source Host:     $($script:SourceDisplayLabel)"    -ForegroundColor Cyan
     Write-Host " Total Tests:     $($script:DefaultList.Count)"     -ForegroundColor White
     Write-Host " Total Succeeded: $($script:SuccessList.Count)"     -ForegroundColor Green
     Write-Host " Total Failed:    $($script:FailureList.Count)"     -ForegroundColor Red
@@ -519,7 +587,8 @@ function Show-ScriptSummary {
 }
 
 # ==============================================================================
-# DNS HELPER — reverse lookup with NoPTR fallback
+# DNS HELPER - reverse lookup with NoPTR fallback (used for destination AND,
+# below, reused as-is for the source host resolution)
 # ==============================================================================
 function Resolve-TargetDNS {
     param([string]$Target)
@@ -565,7 +634,7 @@ function Resolve-TargetDNS {
 }
 
 # ==============================================================================
-# PORT PARSER — accepts comma, space, or mixed separators
+# PORT PARSER - accepts comma, space, or mixed separators
 # ==============================================================================
 function Parse-Ports {
     param([string]$PortInput)
@@ -584,7 +653,7 @@ function Parse-Ports {
 }
 
 # ==============================================================================
-# CORE TCP TEST — single port, returns result object, no console output
+# CORE TCP TEST - single port, returns result object, no console output
 # ==============================================================================
 function Test-SinglePort {
     param(
@@ -646,13 +715,16 @@ function Test-SinglePort {
 }
 
 # ==============================================================================
-# OUTPUT LINE — grouped summary line per target (screen only)
-# Format with comment:    MM.dd.yyyy | hh:mm:ss tt | "comment" | DNSName_IP | Good: 443 80 | Failed: 22
-# Format without comment: MM.dd.yyyy | hh:mm:ss tt | DNSName_IP | Good: 443 80 | Failed: 22
+# OUTPUT LINE - grouped summary line per target (screen only)
+# Format with comment:    MM.dd.yyyy | hh:mm:ss tt | comment | SCR:Name_IP | Dest:Name_IP | Good: 443 80 | Failed: 22
+# Format without comment: MM.dd.yyyy | hh:mm:ss tt | SCR:Name_IP | Dest:Name_IP | Good: 443 80 | Failed: 22
+# "SCR" and "Dest" are literal labels on screen only - log keys remain
+# SourceHostName/SourceHostIP and ResolvedDNSName/ResolvedIP respectively.
 # ==============================================================================
 function Write-TargetSummaryLine {
     param(
-        [string]$DisplayLabel,
+        [string]$SourceDisplayLabel,
+        [string]$DestDisplayLabel,
         [int[]]$GoodPorts,
         [int[]]$FailedPorts,
         [string]$Comment = ''
@@ -661,19 +733,21 @@ function Write-TargetSummaryLine {
     $datePart = Get-Date -Format "MM.dd.yyyy"
     $timePart = Get-Date -Format "hh:mm:ss tt"
 
-    # Date and time
     Write-Host ($datePart + " | " + $timePart + " | ") -NoNewline -ForegroundColor White
 
-    # Comment segment — only printed when a comment was provided
     if (-not [string]::IsNullOrWhiteSpace($Comment)) {
-        Write-Host ('"' + $Comment + '"') -NoNewline -ForegroundColor Cyan
+        Write-Host $Comment -NoNewline -ForegroundColor Cyan
         Write-Host " | " -NoNewline -ForegroundColor White
     }
 
-    # Target label
-    Write-Host ($DisplayLabel + " | ") -NoNewline -ForegroundColor White
+    Write-Host "SCR:" -NoNewline -ForegroundColor White
+    Write-Host $SourceDisplayLabel -NoNewline -ForegroundColor White
+    Write-Host " | " -NoNewline -ForegroundColor White
 
-    # Good ports
+    Write-Host "Dest:" -NoNewline -ForegroundColor White
+    Write-Host $DestDisplayLabel -NoNewline -ForegroundColor White
+    Write-Host " | " -NoNewline -ForegroundColor White
+
     Write-Host "Good: " -NoNewline -ForegroundColor White
     if ($GoodPorts.Count -gt 0) {
         $last = $GoodPorts[-1]
@@ -687,7 +761,6 @@ function Write-TargetSummaryLine {
 
     Write-Host " | " -NoNewline -ForegroundColor White
 
-    # Failed ports
     Write-Host "Failed: " -NoNewline -ForegroundColor White
     if ($FailedPorts.Count -gt 0) {
         $last = $FailedPorts[-1]
@@ -703,7 +776,7 @@ function Write-TargetSummaryLine {
 }
 
 # ==============================================================================
-# TEST RUNNER — tests all ports for one target, writes summary line
+# TEST RUNNER - tests all ports for one target, writes summary line
 # ==============================================================================
 function Invoke-TargetTest {
     param(
@@ -749,14 +822,14 @@ function Invoke-TargetTest {
         }
     }
 
-    # Screen output — one line only
+    # Screen output - one line only
     Write-TargetSummaryLine `
-        -DisplayLabel $dnsInfo.DisplayLabel `
-        -GoodPorts    $goodPorts `
-        -FailedPorts  $failedPorts `
-        -Comment      $Comment
+        -SourceDisplayLabel $script:SourceDisplayLabel `
+        -DestDisplayLabel   $dnsInfo.DisplayLabel `
+        -GoodPorts          $goodPorts `
+        -FailedPorts        $failedPorts `
+        -Comment            $Comment
 
-    # Log the grouped summary as a single INFO record
     $goodStr   = if ($goodPorts.Count   -gt 0) { $goodPorts   -join ' ' } else { '--' }
     $failedStr = if ($failedPorts.Count -gt 0) { $failedPorts -join ' ' } else { '--' }
 
@@ -777,6 +850,18 @@ function Invoke-TargetTest {
 # ==============================================================================
 Write-Host "`n****************************************************" -ForegroundColor White
 
+# --- Source host identification - resolved once per session, reused for
+#     every screen line and every log entry. Reuses Resolve-TargetDNS, the
+#     same function used for the destination, so source gets identical
+#     IPv4-only/NoPTR/UnresolvedIP handling. ---
+Write-Host " Resolving source host (this machine)..." -ForegroundColor Gray
+$script:SourceInfo         = Resolve-TargetDNS -Target ([System.Net.Dns]::GetHostName())
+$script:SourceHostName     = $script:SourceInfo.ResolvedDNSName
+$script:SourceHostIP       = $script:SourceInfo.ResolvedIP
+$script:SourceDisplayLabel = $script:SourceInfo.DisplayLabel
+Write-Host (" Source Host -> {0}" -f $script:SourceDisplayLabel) -ForegroundColor Gray
+Write-Host "****************************************************" -ForegroundColor White
+
 $TestType = ""
 while ($TestType -notin @('1','2')) {
     $TestType = (Read-Host " Test Mode: [1] Single target | [2] Input file").Trim()
@@ -788,12 +873,12 @@ while ($TestType -notin @('1','2')) {
 if ($TestType -eq '1') {
 
     $Target  = Read-Host " Enter the URL / IP"
-    $PortRaw = Read-Host " Enter port(s) — comma or space separated (e.g. 443 80 22)"
+    $PortRaw = Read-Host " Enter port(s) - comma or space separated (e.g. 443 80 22)"
     $Ports   = Parse-Ports -PortInput $PortRaw
 
     while ($Ports.Count -eq 0) {
         Write-Host " No valid ports found. Please try again." -ForegroundColor Yellow
-        $PortRaw = Read-Host " Enter port(s) — comma or space separated"
+        $PortRaw = Read-Host " Enter port(s) - comma or space separated"
         $Ports   = Parse-Ports -PortInput $PortRaw
     }
 
@@ -804,7 +889,7 @@ if ($TestType -eq '1') {
         $IntervalRaw = Read-Host ' Enter interval in seconds ("0" = run once)'
     }
 
-    $Comment = Read-Host " Enter comment (optional — press Enter to skip)"
+    $Comment = Read-Host " Enter comment (optional - press Enter to skip)"
 
     Initialize-Logging -ContextKey (Get-SafeFileKey -Value $Target)
 
@@ -837,12 +922,12 @@ if ($TestType -eq '1') {
         }
     }
 
-    $PortRaw = Read-Host " Enter port(s) to test against ALL targets — comma or space separated (e.g. 443 80 22)"
+    $PortRaw = Read-Host " Enter port(s) to test against ALL targets - comma or space separated (e.g. 443 80 22)"
     $Ports   = Parse-Ports -PortInput $PortRaw
 
     while ($Ports.Count -eq 0) {
         Write-Host " No valid ports found. Please try again." -ForegroundColor Yellow
-        $PortRaw = Read-Host " Enter port(s) — comma or space separated"
+        $PortRaw = Read-Host " Enter port(s) - comma or space separated"
         $Ports   = Parse-Ports -PortInput $PortRaw
     }
 
@@ -878,7 +963,6 @@ if ($TestType -eq '1') {
             $Target = $cols[0].Trim()
             if ([string]::IsNullOrWhiteSpace($Target))       { continue }
 
-            # Per-row port override: if column 2 is numeric port(s) use them; else use global ports
             $rowPorts = $Ports
             if ($cols.Count -ge 2) {
                 $colTwo = $cols[1].Trim()
@@ -886,7 +970,6 @@ if ($TestType -eq '1') {
                 if ($parsed.Count -gt 0) { $rowPorts = $parsed }
             }
 
-            # Comment from last column (legacy S/SE skipped)
             $comment = ''
             if ($cols.Count -ge 4) {
                 $comment = $cols[3].Trim()
